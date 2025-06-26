@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BinBash</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div id="menu-bar">
+        <!-- Apple Logo SVG -->
+        <svg class="apple-logo" viewBox="0 0 100 100">
+            <path d="M50 0C22.4 0 0 22.4 0 50s22.4 50 50 50 50-22.4 50-50S77.6 0 50 0z M72.6 47.9c-0.1 2.9-0.8 5.7-1.9 8.3c-1.1 2.6-2.5 5-4.2 7.1c-1.7 2.1-3.7 4-5.9 5.5c-2.3 1.5-4.7 2.7-7.2 3.5c-2.6 0.8-5.3 1.2-8.1 1.2c-3.7 0-7.3-0.8-10.7-2.3c-3.4-1.5-6.5-3.6-9.2-6.2c-2.7-2.7-5-5.8-6.6-9.3c-1.7-3.5-2.5-7.3-2.5-11.2c0-4.6 0.9-8.7 2.8-12.3c1.9-3.6 4.5-6.5 7.9-8.7c3.4-2.2 7.2-3.3 11.4-3.3c3.2 0 6.3 0.6 9.3 1.9c3 1.3 5.7 3.1 8.1 5.4c2.4 2.3 4.3 4.9 5.8 7.9c1.5 3 2.5 6.2 3 9.7c0.2 1 0.3 2.1 0.4 3.1c0 0.1 0.1 0.3 0.1 0.4c0.1 0.5 0.1 0.9 0.1 1.4L72.6 47.9zM55.8 17.5c-0.8-0.2-1.6-0.3-2.5-0.3c-3.9 0-7 1.2-9.3 3.5c-2.3 2.4-3.5 5.5-3.5 9.4c0 0.9 0.1 1.9 0.3 2.8c0.2 0.9 0.5 1.7 0.9 2.5c0.4 0.8 0.9 1.5 1.6 2.1c0.7 0.6 1.4 1.1 2.2 1.4c0.8 0.4 1.7 0.6 2.6 0.7c0.9 0.1 1.9 0.2 2.8 0.2c3.9 0 7-1.2 9.3-3.5c2.3-2.4 3.5-5.5 3.5-9.4c0-0.9-0.1-1.9-0.3-2.8c-0.2-0.9-0.5-1.7-0.9-2.5c-0.4-0.8-0.9-1.5-1.6-2.1c-0.7-0.6-1.4-1.1-2.2-1.4c-0.8-0.4-1.7-0.6-2.6-0.7c-0.9-0.1-1.9-0.2-2.8-0.2L55.8 17.5z"/>
+        </svg>
+        <div class="menu-item" id="file-menu">
+            File
+            <div class="dropdown-content" id="file-dropdown">
+                <div class="menu-sub-item" onclick="window.app.closeAllWindows()">Close All Windows</div>
+                <div class="separator"></div>
+                <div class="menu-sub-item" onclick="window.app.hideAllDropdowns()">Quit Finder</div>
+            </div>
+        </div>
+        <div class="menu-item" id="edit-menu">Edit</div>
+        <div class="menu-item" id="view-menu">View</div>
+        <div class="menu-item" id="special-menu">Special</div>
+        <div class="menu-item" id="about-menu">About</div>
+    </div>
+
+    <!-- Desktop Icons Container (for better positioning logic) -->
+    <div id="desktop-icons-container">
+        <!-- Icons will be dynamically injected here by main.js -->
+    </div>
+
+    <!-- About This Mac Modal -->
+    <div id="aboutModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-close-button" onclick="window.app.closeModal('aboutModal')"></div>
+            <div class="modal-title">About This Mac</div>
+            <p>Poetic Potential - Thesis Viewer</p>
+            <p>Version 6.08</p>
+            <p>Built with HTML, CSS, and JavaScript</p>
+            <p>&copy; 2025 Robin Opheij</p>
+            <button onclick="window.app.closeModal('aboutModal')">OK</button>
+        </div>
+    </div>
+
+    <!-- Generic Message Modal (for Edit/System actions) -->
+    <div id="messageModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-close-button" onclick="window.app.closeModal('messageModal')"></div>
+            <div class="modal-title" id="messageModalTitle"></div>
+            <p id="messageModalText"></p>
+            <button onclick="window.app.closeModal('messageModal')">OK</button>
+        </div>
+    </div>
+
+    <!-- Include JavaScript files in order -->
+    <script src="scripts/utils.js"></script>
+    <script src="scripts/tenPrint.js"></script>
+    <script src="scripts/cubicLimit.js"></script>
+    <script src="scripts/libraryOfBabel.js"></script>
+    <script src="scripts/battleChess.js"></script>
+    <script src="scripts/desktopItems.js"></script>
+    <script src="scripts/main.js"></script>
+</body>
+</html>
+

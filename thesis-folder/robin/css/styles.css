@@ -1,0 +1,394 @@
+/* General Body Styling - Mac OS 6.08 Desktop Look */
+body {
+    font-family: 'Monaco', 'Lucida Console', 'Andale Mono', monospace; /* Classic monospace font */
+    background-color: #DDDDDD; /* Light gray desktop background */
+    margin: 0;
+    overflow: auto; /* Changed from 'hidden' to 'auto' to allow scrolling when content overflows */
+    user-select: none; /* Prevent text selection for a more app-like feel */
+    cursor: default; /* Default cursor for desktop */
+    min-height: 100vh; /* Ensure body takes full viewport height */
+    position: relative; /* For absolute positioning of windows and icons */
+}
+
+/* Menu Bar Styling */
+#menu-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 20px; /* Standard Mac OS 6.08 menu bar height */
+    background-color: #CCCCCC; /* Menu bar gray */
+    border-bottom: 1px solid #777777; /* Darker bottom border */
+    display: flex;
+    align-items: center;
+    padding-left: 8px; /* Padding for Apple logo */
+    box-sizing: border-box;
+    font-size: 13px; /* Standard menu font size */
+    z-index: 10000; /* Ensure it's on top of everything */
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.5) inset; /* Top light highlight */
+}
+
+.menu-item {
+    padding: 0 8px;
+    cursor: pointer;
+    position: relative;
+    height: 100%;
+    display: flex;
+    align-items: center;
+}
+
+.menu-item:hover {
+    background-color: #0000AA; /* Blue highlight on hover */
+    color: white;
+}
+
+/* Apple Logo (svg, inline) */
+.apple-logo {
+    width: 14px;
+    height: 14px;
+    fill: #333333; /* Dark gray for logo */
+    margin-right: 10px;
+}
+
+/* Dropdown Menu Styling */
+.dropdown-content {
+    display: none;
+    position: absolute;
+    background-color: #CCCCCC;
+    min-width: 160px;
+    box-shadow: 2px 2px 0 #333333;
+    border: 1px solid #000000;
+    z-index: 1; /* Within the menu-bar z-index context */
+    top: 100%; /* Position below the menu item */
+    left: 0;
+    padding: 2px 0;
+}
+
+.dropdown-content .menu-sub-item {
+    color: black;
+    padding: 4px 10px;
+    text-decoration: none;
+    display: block;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.dropdown-content .menu-sub-item:hover {
+    background-color: #0000AA;
+    color: white;
+}
+
+/* Separator for dropdowns */
+.dropdown-content .separator {
+    height: 1px;
+    background-color: #777777;
+    margin: 4px 0;
+    border-bottom: 1px solid #FFFFFF;
+}
+
+/* Desktop Icon Styling */
+.desktop-icon {
+    position: absolute;
+    width: 64px; /* Standard icon size */
+    height: 64px; /* Standard icon size */
+    padding: 5px;
+    text-align: center;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    z-index: 10; /* Below windows, above desktop */
+}
+
+.desktop-icon:hover .icon-label {
+    background-color: #0000AA; /* Blue background on hover */
+    color: white;
+}
+
+.desktop-icon.selected .icon-label {
+    background-color: #0000AA; /* Blue background when selected */
+    color: white;
+}
+
+.desktop-icon-image {
+    width: 32px; /* Image size */
+    height: 32px; /* Image size */
+    background-color: #FFFFFF; /* White background for document icon */
+    border: 1px solid #000000;
+    box-shadow: 1px 1px 0 #777777, -1px -1px 0 #FFFFFF;
+    margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px; /* For the '📄' emoji */
+}
+
+/* Specific icon style for program */
+.desktop-icon-image.program-icon {
+    background-color: #BBBBFF; /* Lighter blue for program icon */
+    font-size: 24px; /* Larger for '▶️' emoji */
+}
+
+/* Specific icon style for launcher */
+.desktop-icon-image.launcher-icon {
+    background-color: #FFDD99; /* Yellowish for launcher icon */
+    font-size: 20px;
+}
+
+
+.icon-label {
+    font-size: 11px;
+    word-break: break-all;
+    line-height: 1.2;
+    padding: 1px 2px;
+}
+
+
+/* Window Styling */
+.window {
+    position: absolute;
+    background-color: #CCCCCC; /* Window background gray */
+    border: 1px solid #000000; /* Dark border */
+    box-shadow: 2px 2px 0 #333333; /* Shadow for depth */
+    min-width: 200px;
+    min-height: 100px;
+    /* Initial position will be set by JS dynamically */
+    resize: both; /* Allow resizing */
+    overflow: hidden; /* Hide content overflow initially */
+    z-index: 999; /* Below menu bar, but on top of other windows */
+}
+
+.window-title-bar {
+    background-color: #0000AA; /* Blue title bar */
+    color: white;
+    padding: 2px 4px;
+    font-size: 13px;
+    height: 18px; /* Standard height */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #000066; /* Darker blue bottom border */
+    cursor: grab; /* Grab cursor for dragging */
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.3) inset; /* Light highlight */
+}
+
+.window-title-bar:active {
+    cursor: grabbing; /* Grabbing cursor when active */
+}
+
+.window-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-left: 20px; /* Space for close button */
+    flex-grow: 1; /* Allows title to take available space */
+}
+
+.window-buttons {
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+.window-close-button {
+    width: 10px;
+    height: 10px;
+    background-color: #CCCCCC; /* Gray button */
+    border: 1px solid #000000; /* Black border */
+    box-shadow: 1px 1px 0 #777777, -1px -1px 0 #FFFFFF; /* Highlight/shadow */
+    cursor: pointer;
+    margin-right: 4px;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 10px;
+    line-height: 1;
+    text-align: center;
+    color: #000;
+}
+
+.window-close-button:hover {
+    background-color: #BBBBBB;
+}
+
+.window-close-button::before {
+    content: "\00D7"; /* Multiplication sign for close */
+    position: absolute;
+    top: -1px;
+}
+
+.window-content {
+    padding: 8px;
+    background-color: white; /* Content area is white */
+    border: 1px solid #777777; /* Inner border */
+    margin: 4px;
+    overflow-y: auto; /* Scrollable content */
+    height: calc(100% - 36px); /* Adjust height for title bar and margins */
+    box-sizing: border-box;
+    font-size: 13px;
+    line-height: 1.4;
+    color: #333333;
+}
+
+/* Removed iframe specific styles */
+
+
+.window-content h1, .window-content h2, .window-content h3 {
+    font-family: 'Chicago', sans-serif; /* A classic Mac font for headings */
+    font-size: 16px;
+    margin-top: 1em;
+    margin-bottom: 0.5em;
+    color: #000;
+}
+.window-content p {
+    margin-bottom: 1em;
+}
+
+/* Styling for references */
+.window-content .section-title {
+    font-family: 'Chicago', sans-serif;
+    font-size: 14px;
+    margin-top: 2em;
+    margin-bottom: 0.8em;
+    font-weight: bold;
+    border-bottom: 1px solid #000; /* Underline for section title */
+    padding-bottom: 2px;
+}
+
+.window-content .reference-item {
+    font-size: 0.9em; /* Smaller font size for references */
+    margin-left: 1em; /* Indent references */
+    margin-bottom: 0.5em; /* Spacing between references */
+    line-height: 1.3;
+}
+
+.window-content .reference-link {
+    font-size: 0.8em; /* Even smaller for inline links */
+    text-decoration: underline; /* Underline for links */
+    color: #0000AA; /* Blue link color */
+    cursor: pointer;
+}
+.window-content .reference-link:hover {
+    color: #0000FF; /* Darker blue on hover */
+}
+
+
+/* Canvas for programs */
+.program-canvas {
+    display: block; /* Remove extra space below canvas */
+    background-color: #0000AA; /* Blue background for the program */
+    width: 100%; /* Make canvas fill its container */
+    height: 100%;
+    /* Keep pixelated font for the text on canvas */
+    font-family: 'Monaco', 'Lucida Console', 'Andale Mono', monospace;
+    color: white; /* White text on canvas */
+    text-rendering: optimizeSpeed; /* Try to keep pixelated look */
+    image-rendering: crisp-edges; /* For pixel art */
+    image-rendering: -moz-crisp-edges;
+    image-rendering: -webkit-optimize-contrast;
+}
+
+
+/* Modal for About This Mac */
+.modal {
+    display: none; /* Hidden by default */
+    position: fixed; /* Stay in place */
+    z-index: 2000; /* Sit on top */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background-color: #CCCCCC;
+    border: 1px solid #000000;
+    box-shadow: 2px 2px 0 #333333;
+    padding: 20px;
+    width: 300px;
+    text-align: center;
+    position: relative;
+}
+
+.modal-close-button {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 16px;
+    height: 16px;
+    background-color: #CCCCCC;
+    border: 1px solid #000000;
+    box-shadow: 1px 1px 0 #777777, -1px -1px 0 #FFFFFF;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 14px;
+    line-height: 1;
+    text-align: center;
+    color: #000;
+}
+.modal-close-button:hover {
+    background-color: #BBBBBB;
+}
+.modal-title {
+    font-family: 'Chicago', sans-serif;
+    font-size: 18px;
+    margin-bottom: 15px;
+}
+.modal p {
+    margin-bottom: 10px;
+    font-size: 13px;
+}
+.modal button {
+    background-color: #CCCCCC;
+    border: 1px solid #000000;
+    box-shadow: 1px 1px 0 #777777, -1px -1px 0 #FFFFFF;
+    padding: 5px 15px;
+    cursor: pointer;
+    font-family: 'Monaco', monospace;
+    font-size: 13px;
+    margin-top: 15px;
+}
+.modal button:active {
+    box-shadow: 0 0 0 transparent; /* No shadow on click */
+    transform: translate(1px, 1px); /* Slight movement for pressed look */
+}
+
+/* Scrollbar Styling (Webkit - Chrome, Safari) */
+.window-content::-webkit-scrollbar {
+    width: 12px; /* Width of the vertical scrollbar */
+}
+
+.window-content::-webkit-scrollbar-track {
+    background: #DDDDDD; /* Track color */
+    border: 1px solid #AAAAAA; /* Border around the track */
+}
+
+.window-content::-webkit-scrollbar-thumb {
+    background: #AAAAAA; /* Thumb color */
+    border: 1px solid #777777; /* Border around the thumb */
+    box-shadow: 1px 1px 0 #BBBBBB inset, -1px -1px 0 #777777 inset; /* Inner bevel effect */
+}
+
+.window-content::-webkit-scrollbar-thumb:hover {
+    background: #999999; /* Darker thumb on hover */
+}
+
+/* Scrollbar corner (Webkit - Chrome, Safari) */
+.window-content::-webkit-scrollbar-corner {
+    background: #DDDDDD; /* Corner color */
+}
+
+/* For Firefox */
+.window-content {
+    scrollbar-width: thin;
+    scrollbar-color: #AAAAAA #DDDDDD;
+}
+
