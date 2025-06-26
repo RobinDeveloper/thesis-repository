@@ -84,6 +84,11 @@ const desktopItems = [
         run: typeof window.programs.battleChessRun === 'function' ? window.programs.battleChessRun : () => console.error("Battle Chess program not loaded.")
     },
     {
+        type: "program",
+        title: "Whitespace", // New Whitespace application
+        run: typeof window.programs.whitespaceRun === 'function' ? window.programs.whitespaceRun : () => console.error("Whitespace program not loaded.")
+    },
+    {
         type: "launcher",
         title: "Library of Babel",
         url: "https://libraryofbabel.info/",

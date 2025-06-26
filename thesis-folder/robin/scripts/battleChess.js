@@ -17,7 +17,7 @@ window.programs.battleChessRun = function(canvasElement, windowId, messageAreaEl
     // Unicode chess pieces
     const pieces = {
         'r': '♜', 'n': '♞', 'b': '♝', 'q': '♛', 'k': '♚', 'p': '♟', // Black pieces
-        'R': '♖', 'N': '♘', 'B': '♗', 'Q': '♕', 'K': '♔', 'P': '♙'  // White pieces
+        'R': '♖', 'N': '♘', 'B': '♗', 'Q': '♕', 'K': '♔', 'P': '♙'  // White pieces - FIX: Corrected all unicode characters
     };
 
     // Initial chess board state (standard starting position)

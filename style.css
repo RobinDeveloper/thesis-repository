@@ -35,12 +35,12 @@ html, body {
 
 /* Optional: style text */
 .item.text {
-  font-family: 'Arial', sans-serif;
-  font-size: 18px;
+  font-family: 'Arizona', sans-serif;
+  font-size: 48px;
   background: rgba(255,255,255,0.7);
   padding: 10px 15px;
   border-radius: 10px;
-  max-width: 200px;
+  max-width: 500px;
 }
 
 .item img {
