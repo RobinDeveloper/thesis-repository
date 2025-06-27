@@ -1,360 +1,476 @@
-// Logic for the Whitespace Esoteric Programming Language Interpreter
+// Global variables for window and icon management
+var activeWindow = null; // Changed from let to var
+var activeIcon = null;    // Changed from let to var
+var initialX, initialY, offsetX, offsetY; // Changed from let to var
+var highestZIndex = 999; // Starting Z-index for windows and icons (icons start lower)
 
-// Namespace for programs to avoid global conflicts
-window.programs = window.programs || {};
+// Store cleanup functions for programs when their windows are closed
+const programCleanupFunctions = {};
 
-window.programs.whitespaceRun = function(windowContentElement, windowId, messageAreaElement) { // Changed first parameter to windowContentElement
-    console.log(`[Whitespace] Initializing for window: ${windowId}`);
+// --- Dragging Functionality (for both windows and icons) ---
+document.addEventListener('mousedown', (e) => {
+    const titleBar = e.target.closest('.window-title-bar');
+    const iconElement = e.target.closest('.desktop-icon');
 
-    // Message Display Function - using function declaration for hoisting behavior
-    function updateMessage(message) {
-        if (messageAreaElement) {
-            messageAreaElement.textContent = message;
-        }
-    }
+    // Reset selected state for all icons
+    document.querySelectorAll('.desktop-icon').forEach(icon => {
+        icon.classList.remove('selected');
+    });
 
-    // Create UI elements
-    const container = document.createElement('div');
-    container.className = 'whitespace-container';
-    // Styles moved to CSS, but direct application for layout might be needed if CSS is not loaded immediately
-    container.style.display = 'flex';
-    container.style.flexDirection = 'column';
-    container.style.width = '100%';
-    container.style.height = '100%';
-    container.style.padding = '8px';
-    container.style.boxSizing = 'border-box';
-    container.style.backgroundColor = 'white';
+    if (titleBar) {
+        // Handle window dragging
+        activeWindow = titleBar.closest('.window');
+        activeIcon = null; // No icon active when dragging window
+        highestZIndex++;
+        activeWindow.style.zIndex = highestZIndex;
 
-    const inputLabel = document.createElement('div');
-    inputLabel.textContent = 'Whitespace Code (Space: S, Tab: T, Newline: N):';
-    inputLabel.style.marginBottom = '5px';
-    container.appendChild(inputLabel);
+        initialX = e.clientX;
+        initialY = e.clientY;
+        offsetX = initialX - activeWindow.getBoundingClientRect().left;
+        offsetY = initialY - activeWindow.getBoundingClientRect().top;
 
-    const codeInput = document.createElement('textarea');
-    codeInput.className = 'whitespace-input-area';
-    codeInput.placeholder = 'Type your Whitespace code here. Use "S" for Space, "T" for Tab, and "N" for Newline for visibility.';
-    codeInput.style.flexGrow = '2';
-    codeInput.style.marginBottom = '8px';
-    container.appendChild(codeInput);
+        document.addEventListener('mousemove', dragElement);
+        document.addEventListener('mouseup', stopDrag);
+    } else if (iconElement) {
+        // Handle icon dragging
+        activeIcon = iconElement;
+        activeIcon.classList.add('selected'); // Select the icon
+        activeWindow = null; // No window active when dragging icon
 
-    const runButton = document.createElement('button');
-    runButton.className = 'whitespace-button';
-    runButton.textContent = 'Run Whitespace Code';
-    runButton.style.marginBottom = '8px';
-    container.appendChild(runButton);
+        // Z-index for icons can be lower than windows but higher than other desktop elements
+        activeIcon.style.zIndex = 50; // Temporarily higher for dragging
 
-    const outputLabel = document.createElement('div');
-    outputLabel.textContent = 'Output:';
-    outputLabel.style.marginBottom = '5px';
-    container.appendChild(outputLabel);
+        initialX = e.clientX;
+        initialY = e.clientY;
+        offsetX = initialX - activeIcon.getBoundingClientRect().left;
+        offsetY = initialY - activeIcon.getBoundingClientRect().top;
 
-    const outputArea = document.createElement('pre'); // Use pre to preserve whitespace and newlines in output
-    outputArea.className = 'whitespace-output-area';
-    outputArea.style.flexGrow = '1';
-    container.appendChild(outputArea);
-
-    // Append the container to the window's content area
-    if (windowContentElement) {
-        windowContentElement.innerHTML = ''; // Clear existing content (e.g., a canvas from default program)
-        windowContentElement.style.padding = '0'; // Reset padding so container can manage it
-        windowContentElement.style.backgroundColor = 'transparent'; // Allow container's background to show
-        windowContentElement.appendChild(container);
+        document.addEventListener('mousemove', dragElement);
+        document.addEventListener('mouseup', stopDrag);
     } else {
-        console.error("[Whitespace] windowContentElement is null, cannot append UI.");
-        updateMessage("Error: UI container not found.");
-        return; // Exit if no place to put UI
+        // Clicked outside a window or title bar or icon, hide all dropdowns
+        window.app.hideAllDropdowns();
+    }
+});
+
+function dragElement(e) {
+    if (activeWindow) {
+        // Dragging a window
+        var newX = e.clientX - offsetX; // Changed from let to var
+        var newY = e.clientY - offsetY; // Changed from let to var
+
+        const maxX = window.innerWidth - activeWindow.offsetWidth;
+        const maxY = window.innerHeight - activeWindow.offsetHeight;
+        newX = Math.max(0, Math.min(newX, maxX));
+        newY = Math.max(20, Math.min(newY, maxY)); // 20px for menu bar
+
+        activeWindow.style.left = `${newX}px`;
+        activeWindow.style.top = `${newY}px`;
+    } else if (activeIcon) {
+        // Dragging an icon
+        var newX = e.clientX - offsetX; // Changed from let to var
+        var newY = e.clientY - offsetY; // Changed from let to var
+
+        // Constrain icon to desktop area (below menu bar)
+        newX = Math.max(0, Math.min(newX, window.innerWidth - activeIcon.offsetWidth));
+        newY = Math.max(20, Math.min(newY, window.innerHeight - activeIcon.offsetHeight));
+
+        activeIcon.style.left = `${newX}px`;
+        activeIcon.style.top = `${newY}px`;
+    }
+}
+
+function stopDrag() {
+    if (activeWindow) {
+        activeWindow = null;
+    }
+    if (activeIcon) {
+        activeIcon.style.zIndex = 10; // Reset icon Z-index
+        activeIcon = null;
+    }
+    document.removeEventListener('mousemove', dragElement);
+    document.removeEventListener('mouseup', stopDrag);
+}
+
+// --- Window Close Functionality ---
+function closeWindow(windowId) {
+    const windowElement = document.getElementById(windowId);
+    if (windowElement) {
+        // If it's a program window, call its cleanup function
+        if (programCleanupFunctions[windowId]) {
+            programCleanupFunctions[windowId](); // Execute cleanup
+            delete programCleanupFunctions[windowId];
+        }
+        windowElement.remove(); // Remove the element from the DOM
+    }
+}
+
+function closeAllWindows() {
+    const windows = document.querySelectorAll('.window');
+    windows.forEach(win => {
+        const windowId = win.id;
+        if (programCleanupFunctions[windowId]) {
+            programCleanupFunctions[windowId]();
+            delete programCleanupFunctions[windowId];
+        }
+        win.remove();
+    });
+    window.app.hideAllDropdowns(); // Hide menu after action
+}
+
+// --- Dynamic Window Creation for Desktop Items (Documents and Programs/Launchers) ---
+var windowCounter = 0; // Changed from let to var, to be consistent with other globals
+
+async function createWindow(item) { // Made async to allow await for fetch
+    if (item.type === 'launcher') {
+        window.open(item.url, '_blank');
+        return; // Don't create a window for launchers
+    }
+
+    // Check if a window with this title is already open. If so, bring it to front.
+    const existingWindow = document.querySelector(`.window[data-item-title="${item.title}"]`);
+    if (existingWindow) {
+        highestZIndex++;
+        existingWindow.style.zIndex = highestZIndex;
+        return; // Exit if already open
+    }
+
+    windowCounter++;
+    const windowId = `item-window-${windowCounter}`;
+
+    const windowDiv = document.createElement('div');
+    windowDiv.id = windowId;
+    windowDiv.className = 'window';
+    windowDiv.setAttribute('data-item-title', item.title); // Store title for identification
+
+    // Randomize initial position slightly around the center
+    const initialLeft = (window.innerWidth / 2) - 300 + (Math.random() * 100 - 50);
+    const initialTop = (window.innerHeight / 2) - 200 + (Math.random() * 100 - 50);
+    windowDiv.style.left = `${initialLeft}px`;
+    windowDiv.style.top = `${initialTop}px`;
+    windowDiv.style.width = '600px'; // Default size
+    windowDiv.style.height = '400px';
+
+    highestZIndex++;
+    windowDiv.style.zIndex = highestZIndex; // Bring new window to front
+
+    let windowContentHTML = '';
+
+    if (item.type === 'document') {
+        // Placeholder content while loading
+        windowContentHTML = `
+            <div class="window-content">
+                <p>Loading ${item.title}...</p>
+            </div>
+        `;
+    } else if (item.type === 'program') {
+        // All program windows will have a message area and either a canvas or content div.
+        // For Whitespace, the .program-canvas will not be used.
+        windowContentHTML = `
+            <div class="window-content" style="background-color: #0000AA; padding: 0; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                <div class="program-message-area" style="color: white; font-size: 14px; padding: 5px; height: 20px; text-align: center; width: 100%; box-sizing: border-box;"></div>
+                ${item.title !== 'Whitespace' ? '<canvas class="program-canvas" style="flex-grow: 1;"></canvas>' : ''}
+            </div>
+        `;
+    }
+
+    windowDiv.innerHTML = `
+        <div class="window-title-bar">
+            <span class="window-title">${item.title}.${item.type === 'document' ? 'rtf' : 'app'}</span>
+            <div class="window-buttons">
+                <div class="window-close-button" onclick="window.app.closeWindow('${windowId}')"></div>
+            </div>
+        </div>
+        ${windowContentHTML}
+    `;
+
+    document.body.appendChild(windowDiv);
+
+    const windowContentDiv = windowDiv.querySelector('.window-content'); // Get reference to the content div
+
+    if (item.type === 'document') {
+        try {
+            // Fetch the content from the specified filePath
+            const response = await fetch(item.filePath);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const rawContent = await response.text();
+            // Apply formatting for references and set the content
+            windowContentDiv.innerHTML = window.utils.formatDocumentContent(rawContent);
+            // Ensure document window content is scrollable and has correct background
+            windowContentDiv.style.backgroundColor = 'white';
+            windowContentDiv.style.overflowY = 'auto';
+            windowContentDiv.style.padding = '8px';
+            windowContentDiv.style.height = `calc(100% - 36px)`; // Recalculate content height after resize
+        } catch (error) {
+            console.error(`Error loading document ${item.filePath}:`, error);
+            windowContentDiv.innerHTML = `<p style="color: red;">Failed to load document: ${error.message}</p>`;
+        }
+    } else if (item.type === 'program' && typeof item.run === 'function') {
+        const programMessageArea = windowDiv.querySelector('.program-message-area');
+
+        if (item.title === 'Whitespace') {
+            // For Whitespace, pass the windowContentDiv itself as the primary container
+            programCleanupFunctions[windowId] = item.run(windowContentDiv, windowId, programMessageArea);
+        } else {
+            // For canvas-based programs (like Battle Chess, 10 PRINT, Cubic Limit)
+            const programCanvas = windowDiv.querySelector('.program-canvas');
+            if (programCanvas) {
+                programCleanupFunctions[windowId] = item.run(programCanvas, windowId, programMessageArea);
+            } else {
+                console.error(`Program '${item.title}' is a program type but no canvas element found.`);
+            }
+        }
+    }
+
+    // Add event listener to bring window to front on click
+    windowDiv.addEventListener('mousedown', (e) => {
+        if (!e.target.closest('.window-title-bar')) { // Only bring to front if not clicking title bar (handled by global listener)
+            highestZIndex++;
+            windowDiv.style.zIndex = highestZIndex;
+        }
+    });
+}
+
+// --- Dynamic Icon Creation for Desktop Items ---
+function createDesktopIcon(item) {
+    const iconContainer = document.getElementById('desktop-icons-container');
+    const iconDiv = document.createElement('div');
+    iconDiv.className = 'desktop-icon';
+    iconDiv.setAttribute('data-item-title', item.title); // Link to item
+
+    let iconImageClass = '';
+    let iconText = '';
+
+    if (item.type === 'program') {
+        iconImageClass = 'program-icon';
+        iconText = '▶️'; // Play button emoji
+    } else if (item.type === 'launcher') {
+        iconImageClass = 'launcher-icon'; // A new class for launchers
+        iconText = item.iconText || '🔗'; // Use specific icon or chain link emoji
+    } else { // document
+        iconText = '�'; // Document emoji
+    }
+
+    iconDiv.innerHTML = `
+        <div class="desktop-icon-image ${iconImageClass}">${iconText}</div>
+        <div class="icon-label">${item.title}</div>
+    `;
+
+    // Position icons initially in a column on the left by default
+    // Their final position will be set by arrangeIcons function
+    iconDiv.style.left = `0px`; // Temp initial position
+    iconDiv.style.top = `0px`;  // Temp initial position
+
+    // Double click to open window/launch
+    let clickTimeout = null;
+    iconDiv.addEventListener('click', () => {
+        if (clickTimeout === null) {
+            // First click: select icon
+            document.querySelectorAll('.desktop-icon').forEach(icon => {
+                icon.classList.remove('selected');
+            });
+            iconDiv.classList.add('selected');
+            clickTimeout = setTimeout(() => {
+                clickTimeout = null;
+            }, 300); // 300ms for double click
+        } else {
+            // Second click within timeout: open window/launch
+            clearTimeout(clickTimeout);
+            clickTimeout = null;
+            createWindow(item); // This will handle program run or launcher open
+            iconDiv.classList.remove('selected'); // Deselect after opening
+        }
+    });
+
+    iconContainer.appendChild(iconDiv);
+}
+
+// --- Icon Arrangement Functions ---
+function arrangeIcons(mode) {
+    const icons = Array.from(document.querySelectorAll('.desktop-icon'));
+    const iconWidth = 64 + (5 * 2); // Icon width + padding
+    const iconHeight = 64 + 5 + 11 + (1 * 2) + 5; // Icon height + padding + label height + label padding + margin-bottom
+
+    let currentX = 10; // Start X position, considering menu bar offset
+    let currentY = 30; // Start Y position, considering menu bar height
+
+    icons.forEach((icon, index) => {
+        if (mode === 'list') {
+            // Arrange as a list (single column)
+            icon.style.left = `${currentX}px`;
+            icon.style.top = `${currentY}px`;
+            icon.style.width = '150px'; // Wider for list view label
+            icon.querySelector('.icon-label').style.textAlign = 'left';
+            currentY += 20; // Smaller spacing for list items
+        } else { // 'icons' mode (default grid) or 'cleanup'
+            // Arrange in a grid
+            icon.style.width = '64px'; // Reset width
+            icon.querySelector('.icon-label').style.textAlign = 'center';
+
+            icon.style.left = `${currentX}px`;
+            icon.style.top = `${currentY}px`;
+
+            currentY += iconHeight;
+            if (currentY + iconHeight > window.innerHeight) {
+                currentY = 30; // Reset Y to top, move to next column
+                currentX += iconWidth + 10; // Move to next column with some spacing
+            }
+        }
+    });
+}
+
+// --- New function to handle Apple logo link ---
+function openAppleLink() {
+    window.open('https://robindeveloper.github.io/thesis-repository/'); // Default to Apple's website
+    window.app.hideAllDropdowns(); // Hide any open menus
+}
+
+
+// --- Initial Setup on Load ---
+window.onload = function() {
+    // Expose functions to global scope
+    window.app = {
+        closeWindow,
+        closeAllWindows,
+        createWindow,
+        createDesktopIcon,
+        arrangeIcons,
+        openModal: window.utils.openModal,
+        closeModal: window.utils.closeModal,
+        showMessage: window.utils.showMessage,
+        hideAllDropdowns: window.utils.hideAllDropdowns,
+        toggleMenu: window.utils.toggleMenu,
+        handleEditAction,
+        openThesisPdf,
+        handleSystemAction,
+        openAppleLink // Expose the new function
+    };
+
+    // Create desktop icons for all items
+    // Defensive check for window.desktopItems
+    if (window.desktopItems && Array.isArray(window.desktopItems)) {
+        window.desktopItems.forEach(item => {
+            window.app.createDesktopIcon(item);
+        });
+        window.app.arrangeIcons('icons'); // Arrange icons on load
+    } else {
+        console.error("window.desktopItems is not defined or not an array. Icons cannot be created.");
     }
 
 
-    // --- Whitespace Interpreter Logic (Simplified) ---
-    const interpretWhitespace = () => {
-        outputArea.textContent = ''; // Clear previous output
-        let code = codeInput.value;
-
-        // Replace visible indicators with actual Whitespace characters
-        code = code.replace(/S/g, ' '); // Space
-        code = code.replace(/T/g, '\t'); // Tab
-        code = code.replace(/N/g, '\n'); // Newline
-
-        const tokens = [];
-        let i = 0;
-        while (i < code.length) {
-            const char = code[i];
-            if (char === ' ' || char === '\t' || char === '\n') {
-                tokens.push(char);
-            }
-            i++;
-        }
-
-        // Program State
-        let stack = [];
-        let heap = {}; // Heap storage (address -> value)
-        let pc = 0; // Program counter (index in tokens array)
-        let callStack = []; // For subroutine calls
-        let labels = {}; // Label name -> token index
-
-        // Pre-parse labels for jumps
-        let labelParsePc = 0;
-        while(labelParsePc < tokens.length) {
-            if (tokens[labelParsePc] === '\n') { // NL
-                if (tokens[labelParsePc + 1] === '\n') { // NL NL NL (Flow Control)
-                    if (tokens[labelParsePc + 2] === ' ') { // NL NL S: Label definition
-                        labelParsePc += 3; // Skip IMP and label command
-                        let labelName = '';
-                        while (tokens[labelParsePc] !== '\n') {
-                            if (tokens[labelParsePc] !== ' ' && tokens[labelParsePc] !== '\t') {
-                                throw new Error(`[Error] Invalid character in label name at index ${labelParsePc}.`);
-                            }
-                            labelName += tokens[labelParsePc];
-                            labelParsePc++;
-                        }
-                        if (labels[labelName]) {
-                            throw new Error(`[Error] Duplicate label: '${labelName}'.`);
-                        }
-                        labels[labelName] = labelParsePc + 1; // Store next instruction's index
-                        console.log(`Defined Label: '${labelName}' at instruction index ${labels[labelName]}`);
-                    }
-                }
-            }
-            labelParsePc++;
-        }
-
-
-        let output = '';
-
-        const readNumber = () => {
-            pc++; // Skip current char (sign or digit)
-            let numStr = '';
-            let sign = 1;
-            if (tokens[pc] === '\t') { // Tab for negative
-                sign = -1;
-                pc++;
-            } else if (tokens[pc] === ' ') { // Space for positive
-                sign = 1;
-                pc++;
+    // --- Menu Bar and Dropdown Functionality ---
+    const menuItems = document.querySelectorAll('.menu-item');
+    menuItems.forEach(item => {
+        item.addEventListener('click', (event) => {
+            const dropdown = item.querySelector('.dropdown-content');
+            if (dropdown) {
+                event.stopPropagation(); // Prevent document click from hiding immediately
+                window.app.toggleMenu(dropdown);
             } else {
-                throw new Error(`[Error] Invalid sign for number. Expected Space or Tab at index ${pc}.`);
+                window.app.hideAllDropdowns();
             }
+        });
+    });
 
-            while (tokens[pc] !== '\n') {
-                if (tokens[pc] === ' ') numStr += '0';
-                else if (tokens[pc] === '\t') numStr += '1';
-                else throw new Error(`[Error] Invalid character in number: '${tokens[pc]}' at index ${pc}.`);
-                pc++;
-                if (pc >= tokens.length) throw new Error("[Error] Unexpected end of code during number parsing (missing NL).");
+    // Edit Menu
+    document.getElementById('edit-menu').addEventListener('click', (event) => {
+        event.stopPropagation();
+        window.app.toggleMenu(document.getElementById('edit-dropdown'));
+    });
+    const editDropdown = document.createElement('div');
+    editDropdown.id = 'edit-dropdown';
+    editDropdown.className = 'dropdown-content';
+    editDropdown.innerHTML = `
+        <div class="menu-sub-item" onclick="window.app.handleEditAction('Undo')">Undo</div>
+        <div class="menu-sub-item" onclick="window.app.handleEditAction('Cut')">Cut</div>
+        <div class="menu-sub-item" onclick="window.app.handleEditAction('Copy')">Copy</div>
+        <div class="menu-sub-item" onclick="window.app.handleEditAction('Paste')">Paste</div>
+    `;
+    document.getElementById('edit-menu').appendChild(editDropdown);
+
+    function handleEditAction(action) {
+        window.app.showMessage('Edit Action', `${action} not implemented in this demo.`);
+        window.app.hideAllDropdowns();
+    }
+
+    // View Menu
+    document.getElementById('view-menu').addEventListener('click', (event) => {
+        event.stopPropagation();
+        window.app.toggleMenu(document.getElementById('view-dropdown'));
+    });
+    const viewDropdown = document.createElement('div');
+    viewDropdown.id = 'view-dropdown';
+    viewDropdown.className = 'dropdown-content';
+    viewDropdown.innerHTML = `
+        <div class="menu-sub-item" onclick="window.app.arrangeIcons('icons')">as Icons</div>
+        <div class="menu-sub-item" onclick="window.app.arrangeIcons('list')">as List</div>
+        <div class="separator"></div>
+        <div class="menu-sub-item" onclick="window.app.arrangeIcons('icons')">Clean Up Window</div>
+    `;
+    document.getElementById('view-menu').appendChild(viewDropdown);
+
+
+    // Special Menu
+    document.getElementById('special-menu').addEventListener('click', (event) => {
+        event.stopPropagation();
+        window.app.toggleMenu(document.getElementById('special-dropdown'));
+    });
+    const specialDropdown = document.createElement('div');
+    specialDropdown.id = 'special-dropdown';
+    specialDropdown.className = 'dropdown-content';
+    specialDropdown.innerHTML = `
+        <div class="menu-sub-item" onclick="window.app.openThesisPdf()">View Thesis PDF</div>
+        <div class="separator"></div>
+        <div class="menu-sub-item" onclick="window.app.handleSystemAction('Restart')">Restart</div>
+        <div class="menu-sub-item" onclick="window.app.handleSystemAction('Shut Down')">Shut Down</div>
+    `;
+    document.getElementById('special-menu').appendChild(specialDropdown);
+
+    function openThesisPdf() {
+        // Path to the PDF file as specified by the user
+        window.open('../../thesis=pdfs/#!binbash.pdf', '_blank');
+        window.app.hideAllDropdowns(); // Hide the menu after opening the PDF
+    }
+
+    function handleSystemAction(action) {
+        window.app.showMessage(action, `Are you sure you want to ${action.toLowerCase()}?`);
+        window.app.hideAllDropdowns();
+    }
+
+    // --- Global Event Listeners ---
+    // Hide dropdowns when clicking anywhere else on the document
+    document.addEventListener('click', window.utils.hideAllDropdowns);
+
+    // Resize behavior for dynamically created windows (handles content height)
+    document.addEventListener('mouseup', () => {
+        document.querySelectorAll('.window').forEach(win => {
+            const contentDiv = win.querySelector('.window-content');
+            if (contentDiv) {
+                contentDiv.style.height = `calc(100% - 36px)`; // Recalculate content height after resize
             }
-            if (numStr === '') throw new Error(`[Error] Empty number value at index ${pc}.`);
+        });
+    });
 
-            // Consume the final newline for the number
-            // pc++; // This will be handled by the outer loop's pc++ after the current instruction
+    // Re-arrange icons on window resize
+    window.addEventListener('resize', () => {
+        window.app.arrangeIcons('icons'); // Re-arrange to grid on resize
+    });
 
-            return parseInt(numStr, 2) * sign;
-        };
-
-        const popAndOperate = (operation) => {
-            if (stack.length < 2) {
-                throw new Error("Stack underflow for arithmetic operation.");
-            }
-            const b = stack.pop();
-            const a = stack.pop();
-            let result;
-            switch (operation) {
-                case '+': result = a + b; break;
-                case '-': result = a - b; break;
-                case '*': result = a * b; break;
-                case '/':
-                    if (b === 0) throw new Error("Division by zero.");
-                    result = Math.floor(a / b); // Integer division
-                    break;
-                case '%':
-                    if (b === 0) throw new Error("Modulo by zero.");
-                    result = a % b;
-                    break;
-                default: throw new Error("Unknown arithmetic operation.");
-            }
-            stack.push(result);
-        };
-
-
-        try {
-            while (pc < tokens.length) {
-                const imp = tokens[pc]; // Instruction Modification Parameter (IMP)
-                let instruction = '';
-                let tempPc = pc; // For error reporting
-
-                if (imp === ' ') { // Stack Manipulation (Space)
-                    pc++;
-                    instruction = tokens[pc];
-                    if (instruction === ' ') { // SP SPACE: Push number onto stack
-                        pc = tempPc + 1; // Adjust PC to start of number parsing
-                        const numericValue = readNumber(); // readNumber consumes until NL
-                        stack.push(numericValue);
-                        console.log(`PUSH: ${numericValue}. Stack: [${stack}]`);
-                    } else if (instruction === '\n') { // SP NL: Duplicate top of stack (Dup)
-                        pc++;
-                        if (stack.length === 0) throw new Error(`Stack underflow for Duplicate at index ${pc}.`);
-                        stack.push(stack[stack.length - 1]);
-                        console.log(`DUP. Stack: [${stack}]`);
-                    } else if (instruction === '\t') { // SP Tab: Various stack ops
-                        pc++;
-                        const op = tokens[pc];
-                        if (op === ' ') { // SP T S: Copy nth item
-                            pc = tempPc + 3; // Adjust PC to start of number for copy
-                            const n = readNumber();
-                            if (stack.length <= n) throw new Error(`Stack underflow for Copy Nth (N=${n}) at index ${pc}.`);
-                            stack.push(stack[stack.length - 1 - n]);
-                            console.log(`COPY NTH (N=${n}). Stack: [${stack}]`);
-                        } else if (op === '\t') { // SP T T: Slide N items off stack
-                            pc = tempPc + 3; // Adjust PC to start of number for slide
-                            const n = readNumber();
-                            if (stack.length <= n) throw new Error(`Stack underflow for Slide N (N=${n}) at index ${pc}.`);
-                            const top = stack.pop(); // Keep top item
-                            stack.splice(stack.length - n, n); // Remove N items below top
-                            stack.push(top); // Put top back
-                            console.log(`SLIDE N (N=${n}). Stack: [${stack}]`);
-                        } else if (op === '\n') { // SP T NL: Swap top two
-                            pc++;
-                            if (stack.length < 2) throw new Error(`Stack underflow for Swap at index ${pc}.`);
-                            const a = stack.pop();
-                            const b = stack.pop();
-                            stack.push(a);
-                            stack.push(b);
-                            console.log(`SWAP. Stack: [${stack}]`);
-                        } else {
-                            throw new Error(`[Error] Unknown stack operation after SP Tab: '${op}' at index ${pc}`);
-                        }
-                    } else {
-                        throw new Error(`[Error] Unknown stack operation after Space: '${instruction}' at index ${pc}`);
-                    }
-
-                } else if (imp === '\t') { // Arithmetic (Tab)
-                    pc++;
-                    const arithmeticImp = tokens[pc];
-                    pc++;
-                    const operation = tokens[pc];
-
-                    if (arithmeticImp === ' ') { // Tab Space: Arithmetic
-                        switch (operation) {
-                            case ' ': popAndOperate('+'); console.log(`ADD. Stack: [${stack}]`); break;
-                            case '\t': popAndOperate('-'); console.log(`SUB. Stack: [${stack}]`); break;
-                            case '\n': popAndOperate('*'); console.log(`MUL. Stack: [${stack}]`); break;
-                            default: throw new Error(`[Error] Unknown arithmetic operation: '${operation}' at index ${pc}`);
-                        }
-                    } else if (arithmeticImp === '\t') { // Tab Tab: More Arithmetic (Division/Modulo)
-                        switch (operation) {
-                            case ' ': popAndOperate('/'); console.log(`DIV. Stack: [${stack}]`); break;
-                            case '\t': popAndOperate('%'); console.log(`MOD. Stack: [${stack}]`); break;
-                            default: throw new Error(`[Error] Unknown advanced arithmetic operation: '${operation}' at index ${pc}`);
-                        }
-                    } else {
-                        throw new Error(`[Error] Unknown Tab instruction: '${arithmeticImp}' at index ${pc}`);
-                    }
-                } else if (imp === '\n') { // Flow Control or I/O (Newline)
-                    pc++;
-                    const subImp = tokens[pc]; // Second IMP (Newline or Space or Tab)
-
-                    if (subImp === '\n') { // NL NL: Flow Control
-                        pc++;
-                        const flowOp = tokens[pc];
-                        if (flowOp === ' ') { // NL NL S: Label definition (already parsed)
-                            // Skip label, it's for reference, not execution
-                            pc++; // Skip label character
-                            while(tokens[pc] !== '\n' && pc < tokens.length) pc++; // Skip label name
-                            if(tokens[pc] !== '\n') throw new Error(`[Error] Expected NL after label name at index ${pc}.`);
-                            console.log("Skipping label definition (already processed)");
-                        } else if (flowOp === '\t') { // NL NL T: Call Subroutine
-                            pc++; // Skip call command
-                            let labelName = '';
-                            while(tokens[pc] !== '\n' && pc < tokens.length) {
-                                labelName += tokens[pc];
-                                pc++;
-                            }
-                            if(!labels[labelName]) throw new Error(`[Error] Undefined label for call: '${labelName}' at index ${pc}.`);
-                            callStack.push(pc + 1); // Push return address (next instruction)
-                            pc = labels[labelName]; // Jump to label
-                            console.log(`CALL to label '${labelName}'. Call stack: [${callStack}]`);
-                            continue; // Don't increment pc again in main loop
-
-                        } else if (flowOp === '\n') { // NL NL NL: End program
-                            updateMessage('Execution finished. End of program.');
-                            return; // Halt execution
-                        } else {
-                            throw new Error(`[Error] Unknown Flow Control operation: '${flowOp}' at index ${pc}`);
-                        }
-                    } else if (subImp === ' ') { // NL S: I/O
-                        pc++;
-                        const ioType = tokens[pc];
-
-                        if (ioType === ' ') { // NL S S: Output character
-                            if (stack.length === 0) throw new Error(`Stack underflow for Output Char at index ${pc}.`);
-                            const charCode = stack.pop();
-                            output += String.fromCharCode(charCode);
-                            console.log(`OUT_CHAR: '${String.fromCharCode(charCode)}'. Output: "${output}"`);
-                        } else if (ioType === '\t') { // NL S T: Output number
-                            if (stack.length === 0) throw new Error(`Stack underflow for Output Number at index ${pc}.`);
-                            const num = stack.pop();
-                            output += num.toString();
-                            console.log(`OUT_NUM: ${num}. Output: "${output}"`);
-                        } else {
-                            throw new Error(`[Error] Unknown Output operation: '${ioType}' at index ${pc}`);
-                        }
-                    } else if (subImp === '\t') { // NL Tab: Heap Access (Store/Retrieve)
-                        pc++;
-                        const heapOp = tokens[pc];
-                        if (heapOp === ' ') { // NL T S: Store
-                            if (stack.length < 2) throw new Error(`Stack underflow for Store at index ${pc}.`);
-                            const value = stack.pop();
-                            const address = stack.pop();
-                            heap[address] = value;
-                            console.log(`STORE: Address ${address} = ${value}. Heap: ${JSON.stringify(heap)}`);
-                        } else if (heapOp === '\t') { // NL T T: Retrieve
-                            if (stack.length < 1) throw new Error(`Stack underflow for Retrieve at index ${pc}.`);
-                            const address = stack.pop();
-                            if (heap[address] === undefined) throw new Error(`Undefined address for Retrieve: ${address} at index ${pc}.`);
-                            stack.push(heap[address]);
-                            console.log(`RETRIEVE: Address ${address} -> ${heap[address]}. Stack: [${stack}]`);
-                        } else {
-                            throw new Error(`[Error] Unknown Heap operation: '${heapOp}' at index ${pc}`);
-                        }
-                    }
-                    else {
-                        throw new Error(`[Error] Unknown Newline instruction: '${subImp}' at index ${pc}`);
-                    }
-                } else {
-                    // Ignore non-whitespace characters if they somehow got through.
-                    // Or, for a strict interpreter, this would be an error.
-                    // For this simplified version, we'll consider anything not ' ', '\t', '\n' as an error for clarity.
-                    throw new Error(`[Error] Invalid character detected: '${imp}' at index ${pc}. Whitespace only uses spaces, tabs, and newlines.`);
-                }
-                pc++; // Move to next token, unless already jumped
-            }
-            outputArea.textContent = output;
-            updateMessage('Execution finished.');
-        } catch (error) {
-            outputArea.textContent = `Error: ${error.message}`;
-            updateMessage('Execution failed!');
-            console.error(error);
+    // Hide icons when a window is dragged over them (visual hierarchy)
+    document.addEventListener('mousedown', (e) => {
+        if (e.target.closest('.window')) {
+            document.querySelectorAll('.desktop-icon').forEach(icon => {
+                icon.style.pointerEvents = 'none'; // Disable clicking on icons when dragging window
+            });
         }
-    };
+    });
 
-    // --- Event Listeners and Cleanup ---
-    const runHandler = () => interpretWhitespace();
-    runButton.addEventListener('click', runHandler);
-
-    // Initial message
-    updateMessage('Ready to interpret Whitespace.');
-
-    // Return a cleanup function for main.js to call when the window is closed
-    return () => {
-        runButton.removeEventListener('click', runHandler);
-        // Reset window-content element if it was modified
-        if (windowContentElement) {
-            // Restore padding and background color if necessary for other apps
-            windowContentElement.innerHTML = '';
-            windowContentElement.style.padding = '8px';
-            windowContentElement.style.backgroundColor = 'white';
-        }
-        console.log(`[Whitespace] Cleanup for window ${windowId} completed.`);
-    };
+    document.addEventListener('mouseup', () => {
+        document.querySelectorAll('.desktop-icon').forEach(icon => {
+            icon.style.pointerEvents = 'auto'; // Re-enable clicking on icons
+        });
+    });
 };
-
+�
