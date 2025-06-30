@@ -207,6 +207,12 @@ Lev_The_Language_of_the_New_Media.pdf</p>
         title: "Library of Babel",
         url: "https://libraryofbabel.info/",
         iconText: "📚" // Book emoji for library
+    },
+    {
+	type: "launcher",
+	title: "Fast Inverse Sqaure Root",
+	url: "https://en.wikipedia.org/wiki/Fast_inverse_square_root",
+	iconText: "🌐"
     }
 ];
 
