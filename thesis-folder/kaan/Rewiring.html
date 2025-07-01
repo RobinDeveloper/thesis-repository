@@ -1,0 +1,1485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interactive Wiring TV</title>
+  <style>
+    body {
+      background-color: #1a1a1a;
+      color: #00ff00;
+      font-family: 'Courier New', Courier, monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 10px;
+      margin: 0;
+      overflow: hidden;
+      min-height: 100vh;
+      cursor: default;
+    }
+
+    /* Outer TV casing */
+    .tv-box {
+      position: relative;
+      width: 95vw;
+      height: 95vh;
+      max-width: 1000px;
+      max-height: 750px;
+      aspect-ratio: 4 / 3;
+      background: #2a2a2a;
+      border: 8px solid #111;
+      border-radius: 20px;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.7) inset;
+      display: flex;
+      flex-direction: column; /* Main flex direction for TV content */
+      align-items: center;
+      justify-content: space-between;
+      padding: 30px;
+      box-sizing: border-box;
+      overflow: hidden;
+      margin: auto;
+      z-index: 1; /* Ensures it's below SVG cables but above background */
+    }
+
+    /* Ambient glow effect (outside the TV) */
+    .tv-box::before, .tv-box::after, .tv-box .side-glow-left, .tv-box .side-glow-right {
+        content: '';
+        position: absolute;
+        pointer-events: none;
+        z-index: 0; /* Ensures it's behind the TV box content */
+        background: radial-gradient(circle at center, rgba(0, 255, 0, 0.18) 0%, transparent 70%); /* Stronger initial glow */
+        filter: blur(70px); /* More blur for wider spread */
+        animation: ambient-glow 3s ease-in-out infinite alternate; /* Sync with screen glow */
+    }
+
+    .tv-box::before { /* Top glow */
+        top: -15%; /* Position further above */
+        left: 50%;
+        transform: translateX(-50%);
+        width: 110%; /* Wider than screen */
+        height: 60%; /* Taller */
+    }
+
+    .tv-box::after { /* Bottom glow */
+        bottom: -15%;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 110%;
+        height: 60%;
+    }
+
+    .tv-box .side-glow-left { /* Left glow */
+        left: -15%;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 60%;
+        height: 100%;
+        background: radial-gradient(circle at center, rgba(0, 255, 0, 0.18) 0%, transparent 70%);
+        filter: blur(70px);
+        animation: ambient-glow 3s ease-in-out infinite alternate;
+    }
+
+    .tv-box .side-glow-right { /* Right glow */
+        right: -15%;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 60%;
+        height: 100%;
+        background: radial-gradient(circle at center, rgba(0, 255, 0, 0.18) 0%, transparent 70%);
+        filter: blur(70px);
+        animation: ambient-glow 3s ease-in-out infinite alternate;
+    }
+
+
+    @keyframes ambient-glow {
+        0% { opacity: 0.8; }
+        50% { opacity: 1; }
+        100% { opacity: 0.8; }
+    }
+
+
+    /* Top section of the TV: screen and knobs side-by-side */
+    .tv-top-section {
+      display: flex;
+      width: 100%;
+      flex-grow: 1; /* Allow to take available height */
+      align-items: flex-start; /* Align screen and knobs to the top */
+      gap: 20px; /* Space between screen and knobs */
+      margin-bottom: 10px; /* Reduced space above bottom panel */
+    }
+
+    /* Inner screen container - for bezel and curvature */
+    .screen-container {
+      position: relative;
+      flex-grow: 1; /* Screen takes most horizontal space */
+      height: 100%; /* Take full height of tv-top-section */
+      min-height: 150px;
+      background: #0d0d0d;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.8) inset;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      border: 2px solid #070707;
+      z-index: 5;
+    }
+
+    /* Actual display area */
+    #screenText {
+      position: relative;
+      font-size: clamp(0.7rem, 2vw, 1.6rem);
+      text-align: center;
+      width: 95%;
+      height: 95%;
+      display: flex;
+      flex-direction: column; /* Allow content to stack */
+      align-items: center;
+      justify-content: center;
+      background-color: #011d01;
+      border-radius: 8px;
+      color: #00ff00;
+      transition: all 0.2s ease;
+      border-radius: 50% / 10%;
+      /* Enhanced Glow */
+      box-shadow: 0 0 45px rgba(0, 255, 0, 0.9), /* Brighter, larger initial glow */
+                  inset 0 0 60px rgba(0, 255, 0, 0.3), /* Enhanced inner glow */
+                  inset 0 0 15px rgba(0, 0, 0, 0.9);
+      animation: flicker 0.1s infinite alternate, glow-breathe 3s ease-in-out infinite alternate;
+      padding: 10px;
+      box-sizing: border-box;
+      z-index: 10;
+      transform: perspective(1000px) rotateX(2deg);
+    }
+
+    #screenText.glitch-active {
+      animation: glitch 0.2s linear 2, flicker 0.1s infinite alternate;
+    }
+
+    #screenText.dimmed {
+      box-shadow: 0 0 15px rgba(0, 255, 0, 0.4),
+                  inset 0 0 20px rgba(0, 255, 0, 0.1),
+                  inset 0 0 15px rgba(0, 0, 0, 0.9);
+      animation: none;
+    }
+
+    /* Scanline effect */
+    #screenText::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: repeating-linear-gradient(
+        to bottom,
+        rgba(0, 0, 0, 0.15),
+        rgba(0, 0, 0, 0.15) 1px,
+        transparent 1px,
+        transparent 2px
+      );
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* Screen vignette effect */
+    #screenText::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.7);
+      border-radius: 50% / 10%;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    @keyframes glitch {
+      0% { transform: translate(0); opacity: 1; }
+      25% { transform: translate(-2px, 2px); opacity: 0.8; }
+      50% { transform: translate(2px, -2px); opacity: 1; }
+      75% { transform: translate(-1px, 1px); opacity: 0.9; }
+      100% { transform: translate(1px, -1px); opacity: 1; }
+    }
+
+    @keyframes flicker {
+      0% { opacity: 1; }
+      50% { opacity: 0.98; }
+      100% { opacity: 1; }
+    }
+
+    @keyframes glow-breathe {
+      0% { box-shadow: 0 0 45px rgba(0, 255, 0, 0.9), inset 0 0 60px rgba(0, 255, 0, 0.3), inset 0 0 15px rgba(0, 0, 0, 0.9); }
+      50% { box-shadow: 0 0 60px rgba(0, 255, 0, 1), inset 0 0 80px rgba(0, 255, 0, 0.4), inset 0 0 15px rgba(0, 0, 0, 0.9); }
+      100% { box-shadow: 0 0 45px rgba(0, 255, 0, 0.9), inset 0 0 60px rgba(0, 255, 0, 0.3), inset 0 0 15px rgba(0, 0, 0, 0.9); }
+    }
+
+    /* Knob container for functional knobs */
+    .tv-knobs-container {
+      display: flex;
+      flex-direction: column;
+      gap: 15px; /* Adjusted gap for new knob */
+      align-items: center;
+      flex-shrink: 0;
+      margin-top: 10px;
+    }
+
+    .knob-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .tv-knob {
+      width: clamp(35px, 5vw, 45px);
+      height: clamp(35px, 5vw, 45px);
+      border-radius: 50%;
+      background: linear-gradient(to bottom right, #555, #222);
+      border: 2px solid #111;
+      box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.7), 0 2px 5px rgba(0, 0, 0, 0.5);
+      position: relative;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: transform 0.1s ease-out, box-shadow 0.1s ease-out;
+    }
+    .tv-knob:active {
+      transform: translateY(2px);
+      box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.9), 0 1px 2px rgba(0, 0, 0, 0.5);
+    }
+
+    .tv-knob::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(45deg);
+      width: clamp(7px, 1.2vw, 9px);
+      height: clamp(14px, 2.2vw, 18px);
+      background-color: #888;
+      border-radius: 2px;
+      box-shadow: 0 0 3px rgba(255, 255, 255, 0.3);
+    }
+
+    .knob-label {
+      color: #00cc00;
+      font-size: clamp(0.7rem, 1.2vw, 0.9rem);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      text-align: center;
+      background-color: rgba(0, 0, 0, 0.5);
+      padding: 3px 8px;
+      border-radius: 3px;
+      box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.7);
+    }
+
+    /* Main bottom panel container for I/O - changed to column layout */
+    .tv-main-panel {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      flex-shrink: 0;
+      align-items: flex-start;
+      margin-top: 10px;
+    }
+
+    /* Container for the combined Output and Input areas */
+    .io-panel-wrapper {
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        background-color: transparent;
+        border: none;
+        border-radius: 0;
+        box-shadow: none;
+        padding: 0;
+        box-sizing: border-box;
+        gap: 0;
+    }
+
+    /* Output and Input Row containers */
+    .output-row-container, .input-row-container {
+        display: flex;
+        justify-content: center;
+        align-items: stretch;
+        width: 100%;
+        padding: 0;
+        box-sizing: border-box;
+        gap: 5px;
+    }
+
+    /* Shared background for output sections */
+    .output-sections-bg {
+        background-color: rgba(13, 13, 13, 1);
+        border: 1px solid #333;
+        border-radius: 5px;
+        box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: space-around;
+        align-items: flex-start;
+        gap: 0;
+        padding: 5px 0;
+        flex-grow: 1;
+    }
+
+    /* Shared background for input sections */
+    .input-sections-bg {
+        background-color: rgba(10, 10, 10, 1);
+        border: 1px solid #333;
+        border-radius: 50px;
+        box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
+        display: flex;
+        flex-grow: 1;
+        flex-direction: column;
+        align-items: center;
+        padding: 5px 0;
+    }
+
+    /* Vertical Labels for I/O sections */
+    .io-side-label {
+        display: flex;
+        flex-direction: column;
+        justify-content: center; /* Vertically center text */
+        align-items: center;
+        color: #00cc00;
+        font-size: clamp(0.8rem, 1.3vw, 1rem);
+        font-weight: bold;
+        letter-spacing: 1px;
+        line-height: 1.1;
+        border: 1px solid #333;
+        border-radius: 3px;
+        padding: 5px 3px;
+        text-align: center;
+        height: auto; /* Allow height to adjust */
+        min-height: 50px; /* Ensure a minimum height if content is small */
+        flex-shrink: 0;
+        min-width: 30px;
+        box-sizing: border-box;
+        background-color: rgba(30, 30, 30, 0.8);
+    }
+    /* Explicitly align the OUTPUTS label to the height of the output-sections-bg */
+    .output-row-container .io-side-label {
+        align-self: stretch; /* Stretch to fill the height of its sibling (output-sections-bg) */
+    }
+
+
+    /* Individual Output Section styling */
+    .output-section {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      padding: 0 4px;
+      flex-shrink: 0;
+      flex-grow: 1;
+      min-width: 70px;
+      flex-basis: auto;
+      justify-content: center;
+    }
+    .output-section:not(:last-child) {
+        border-right: 1px solid rgba(51, 51, 51, 0.5);
+    }
+    .output-section .section-label-text {
+      color: #00cc00;
+      font-size: clamp(0.7rem, 1vw, 0.9rem);
+      margin-bottom: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      text-align: center;
+      width: 100%;
+    }
+    .output-section .pins-row {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      align-items: center;
+      width: 100%;
+    }
+
+    /* Input Area styling */
+    .input-area-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        flex-grow: 1;
+    }
+    .input-area-content h3 {
+      display: none;
+    }
+
+    /* INPUT PLUGS */
+    .input-plugs-row {
+      display: flex;
+      justify-content: center;
+      gap: 17px;
+      align-items: center;
+      width: 100%;
+    }
+
+    /* Common hole (port) styling */
+    .hole {
+      width: clamp(18px, 2.5vw, 22px);
+      height: clamp(18px, 2.5vw, 22px);
+      border: 2px solid #555;
+      border-radius: 50%;
+      background-color: #111;
+      cursor: pointer;
+      transition: all 0.2s ease-in-out;
+      position: relative;
+      flex-shrink: 0;
+      box-sizing: border-box;
+      box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5), 0 0 3px rgba(0, 0, 0, 0.3);
+    }
+    .hole::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: clamp(7px, 1vw, 9px);
+      height: clamp(7px, 1vw, 9px);
+      border-radius: 50%;
+      background-color: #333;
+      border: 1px solid #000;
+    }
+
+    /* Specific styles for input pins */
+    .hole.input-pin {
+      border-color: #666;
+    }
+
+    /* Specific styles for output pins (now carry cable colors) */
+    .hole.output-pin[data-cable="1"] { border-color: #D32F2F; }
+    .hole.output-pin[data-cable="2"] { border-color: #1976D2; }
+    .hole.output-pin[data-cable="3"] { border-color: #FBC02D; }
+
+    .hole.selected {
+      border-width: 3px;
+      box-shadow: 0 0 15px currentColor;
+    }
+    .hole.connected {
+      background-color: #00ff00;
+      box-shadow: 0 0 10px #00ff00;
+    }
+
+    /* Class for the red flash effect (toggled by JS) */
+    .hole.invalid-target-glow {
+      background-color: #D32F2F !important;
+      border-color: #FF0000 !important;
+      box-shadow: 0 0 15px 5px rgba(255, 0, 0, 0.8), inset 0 0 10px rgba(255, 0, 0, 0.5) !important;
+      transition: none;
+    }
+
+    svg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 20;
+    }
+
+    /* Typing animation and cursor styles */
+    #pressSpaceText {
+        font-size: clamp(0.7rem, 1.5vw, 1.2rem);
+        color: #00ff00;
+        text-align: center;
+        width: 100%;
+        position: absolute;
+        bottom: 10px;
+        left: 0;
+        right: 0;
+        padding: 5px;
+        box-sizing: border-box;
+    }
+
+    #pressSpaceText span.cursor {
+        display: inline-block;
+        width: 0.8ch;
+        height: 1em;
+        background-color: #00ff00;
+        vertical-align: middle;
+        margin-left: 2px;
+        animation: blink 0.75s step-end infinite;
+    }
+
+    @keyframes blink {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0; }
+    }
+
+    /* Loading text specific styles */
+    #loadingTextContainer {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 10px;
+        font-size: clamp(1rem, 2.5vw, 2rem);
+        color: #00ff00;
+    }
+    #loadingPercentage {
+        min-width: 4ch; /* Reserve space for 100% */
+        text-align: left;
+    }
+    
+    /* NEW Unified content styling */
+    .content-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        text-align: center;
+    }
+
+    .content-title {
+        font-size: clamp(1.5rem, 3.5vw, 2.8rem);
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    .content-author {
+        font-size: clamp(0.9rem, 2vw, 1.6rem);
+        margin-bottom: 20px;
+    }
+    .content-subtitle {
+        font-size: clamp(0.8rem, 1.5vw, 1.2rem);
+        line-height: 1.4;
+        text-align: left;
+        width: 90%;
+        margin: 0 auto;
+        white-space: pre-wrap;
+    }
+
+    /* Unified text block for any regular text page */
+    .content-text-block {
+        font-size: clamp(0.8rem, 1.5vw, 1.2rem); /* Reduced font size */
+        line-height: 1.4;
+        text-align: left;
+        width: 90%;
+        margin: 0 auto;
+        white-space: pre-wrap;
+    }
+
+    .content-text-block ul {
+        list-style: none;
+        padding: 0;
+        margin-top: 10px;
+        text-align: left;
+        width: 90%;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    .content-text-block ul li::before {
+        content: '• ';
+        color: #00ff00;
+        font-weight: bold;
+        display: inline-block;
+        width: 1em;
+        margin-left: -1em;
+    }
+
+    .content-text-block ol {
+        list-style-type: decimal;
+        padding-left: 25px; /* Indent the list */
+        margin-top: 5px;
+        text-align: left;
+        width: 90%;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    .content-text-block ol li {
+        margin-bottom: 5px; /* Space between list items */
+    }
+
+
+    /* Styles for images within subsections */
+    .subsection-image-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        /* FIXED: Removed height: 100% to allow container to size to its content */
+        box-sizing: border-box;
+        padding: 10px;
+        overflow: hidden;
+    }
+    .subsection-image-container img {
+        max-width: 90%;
+        max-height: 75%;
+        object-fit: contain;
+        border: 1px solid #00ff00;
+        box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+    }
+    .subsection-image-container .image-caption {
+        font-size: clamp(0.7rem, 1.2vw, 0.9rem);
+        color: #00cc00;
+        margin-top: 10px;
+        text-align: center;
+        width: 90%;
+        white-space: pre-wrap;
+    }
+
+    /* Page index styling */
+    #pageIndex {
+        position: absolute;
+        bottom: 10px;
+        right: 10px;
+        font-size: clamp(0.7rem, 1.2vw, 0.9rem);
+        color: #00ff00;
+        background-color: rgba(0, 0, 0, 0.5);
+        padding: 3px 8px;
+        border-radius: 3px;
+        box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.7);
+        display: none; /* Hidden by default */
+        z-index: 100; /* Ensure it's on top */
+    }
+  </style>
+</head>
+<body>
+  <div class="tv-box">
+    <div class="side-glow-left"></div>
+    <div class="side-glow-right"></div>
+    
+    <div class="tv-top-section">
+      <div class="screen-container" id="screenContainer">
+        <div id="screenText" class="screen-text">
+          <!-- All dynamic content will be injected here by JavaScript -->
+        </div>
+      </div>
+
+      <div class="tv-knobs-container">
+        <div class="knob-group">
+          <div class="tv-knob" id="introKnob"></div>
+          <div class="knob-label">INTRO</div>
+        </div>
+        <!-- ADDED: New knob for sections -->
+        <div class="knob-group">
+          <div class="tv-knob" id="sectionsKnob"></div>
+          <div class="knob-label">SECTIONS</div>
+        </div>
+        <div class="knob-group">
+          <div class="tv-knob" id="conclKnob"></div>
+          <!-- UPDATED: Label text changed -->
+          <div class="knob-label">CONCLUSION</div>
+        </div>
+        <div class="knob-group">
+          <div class="tv-knob" id="unplugAllKnob"></div>
+          <div class="knob-label">UNPLUG</div>
+        </div>
+        <div class="knob-group">
+          <div class="tv-knob" id="sourcesKnob"></div>
+          <div class="knob-label">SOURCES</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tv-main-panel">
+      <div class="io-panel-wrapper" id="ioPanelWrapper">
+        <div class="output-row-container">
+          <div class="io-side-label">OUT<br>PUTS</div>
+          <div class="output-sections-bg">
+            <div class="output-section" data-label="SECTION1">
+              <div class="section-label-text">SECTION 1</div>
+              <div class="pins-row">
+                <div class="hole output-pin" data-cable="1" data-index="1"></div>
+                <div class="hole output-pin" data-cable="1" data-index="2"></div>
+                <div class="hole output-pin" data-cable="1" data-index="3"></div>
+                <div class="hole output-pin" data-cable="1" data-index="4"></div>
+                <div class="hole output-pin" data-cable="1" data-index="5"></div>
+              </div>
+            </div>
+            <div class="output-section" data-label="SECTION2">
+              <div class="section-label-text">SECTION 2</div>
+              <div class="pins-row">
+                <div class="hole output-pin" data-cable="2" data-index="1"></div>
+                <div class="hole output-pin" data-cable="2" data-index="2"></div>
+                <div class="hole output-pin" data-cable="2" data-index="3"></div>
+                <div class="hole output-pin" data-cable="2" data-index="4"></div>
+                <div class="hole output-pin" data-cable="2" data-index="5"></div>
+                <div class="hole output-pin" data-cable="2" data-index="6"></div>
+              </div>
+            </div>
+            <div class="output-section" data-label="SECTION3">
+              <div class="section-label-text">SECTION 3</div>
+              <div class="pins-row">
+                <div class="hole output-pin" data-cable="3" data-index="1"></div>
+                <div class="hole output-pin" data-cable="3" data-index="2"></div>
+                <div class="hole output-pin" data-cable="3" data-index="3"></div>
+                <div class="hole output-pin" data-cable="3" data-index="4"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="input-row-container" id="inputRowContainer">
+          <div class="io-side-label">IN<br>PUTS</div>
+          <div class="input-sections-bg">
+            <div class="input-area-content">
+              <div class="input-plugs-row">
+                <div class="hole input-pin" data-index="1"></div>
+                <div class="hole input-pin" data-index="2"></div>
+                <div class="hole input-pin" data-index="3"></div>
+                <div class="hole input-pin" data-index="4"></div>
+                <div class="hole input-pin" data-index="5"></div>
+                <div class="hole input-pin" data-index="6"></div>
+                <div class="hole input-pin" data-index="7"></div>
+                <div class="hole input-pin" data-index="8"></div>
+                <div class="hole input-pin" data-index="9"></div>
+                <div class="hole input-pin" data-index="10"></div>
+                <div class="hole input-pin" data-index="11"></div>
+                <div class="hole input-pin" data-index="12"></div>
+                <div class="hole input-pin" data-index="13"></div>
+                <div class="hole input-pin" data-index="14"></div>
+                <div class="hole input-pin" data-index="15"></div>
+                <div class="hole input-pin" data-index="16"></div>
+                <div class="hole input-pin" data-index="17"></div>
+                <div class="hole input-pin" data-index="18"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <svg id="wireLayer"></svg>
+
+  <script>
+    try {
+        document.addEventListener('DOMContentLoaded', (event) => {
+            // === Physics Constants ===
+            const DRAG_SWING_ACCELERATION = 0.003;
+            const DRAG_SWING_DAMPING = 0.75;
+            const IDLE_SWING_DAMPING = 0.85;
+            const IDLE_RANDOM_FORCE = 0.0000001;
+            const TYPING_SPEED = 15;
+
+            // === Element References ===
+            const outputPlugs = document.querySelectorAll('.output-section .hole.output-pin');
+            const screen = document.getElementById('screenText');
+            const svg = document.getElementById('wireLayer');
+            const screenContainer = document.getElementById('screenContainer');
+            const ioPanelWrapper = document.getElementById('ioPanelWrapper');
+            const tvMainPanel = document.querySelector('.tv-main-panel');
+            const introKnob = document.getElementById('introKnob');
+            const sectionsKnob = document.getElementById('sectionsKnob'); // ADDED
+            const conclKnob = document.getElementById('conclKnob');
+            const unplugAllKnob = document.getElementById('unplugAllKnob');
+            const sourcesKnob = document.getElementById('sourcesKnob');
+
+            // === State Variables ===
+            let selectedSourcePlug = null;
+            let tempCableSVGPath = null;
+            let selectedCableColor = null;
+            let dragSwingVelocity = 0;
+            let dragSwingAngle = 0;
+            let prevDragMouseX = 0;
+            let activeConnections = [];
+
+            // Screen & Content State
+            let currentScreenState = 'idle';
+            let currentTypingInterval = null;
+            let currentOnCompleteCallback = null;
+            let isTyping = false;
+            let canContinue = false;
+            let loadingInterval = null;
+            
+            let currentContentArray = [];
+            let currentContentPageIndex = 0;
+
+            const initialScreenTextContent = 'Connect an OUTPUT cable to any INPUT port...';
+
+            // === UNIFIED CONTENT SEQUENCES ===
+
+            // UPDATED: Removed section lists from intro
+            const introSequence = [
+                { type: 'text', content: `Welcome to the Reality Rewiring Interface.\n\nTo begin, click on any colored output port (the small circles in the OUTPUTS section) and drag the cable to an INPUT port (the small circles in the INPUTS section) to access a subsection of the thesis.\n\nUse the knobs on the right:\n- INTRO: Restarts this introduction sequence.\n- SECTIONS: Displays the thesis section outlines.\n- CONCLUSION: Triggers the Conclusion sequence.\n- UNPLUG: Disconnects all active cables.\n- SOURCES: Displays all references cited in the thesis.` },
+                { type: 'title', title: "(Re-)Wiring Reality", author: "by Kaan Orkan Pişkin", subtitle: "How Technological Augmentations like Artificial Intelligence, Brain-Machine Interfaces and Advanced Prosthetics Reshape Human Perception, Interaction and Cognition, and how the transhumanist approach lacks a more holistic understanding of the human." },
+                { type: 'text', content: `Our history is and always has been marked by the use of technologies which let us transcend our biological limitations. From primitive tools which allowed us to extend our bodily reach to the development of methods for communication which expanded our cognitive capacities such as literature and writing.` },
+                { type: 'text', content: `Technological evolution is and has been inseparable from our progress. \n\n In today’s time, the momentum of this evolutionary process has rapidly increased, ranging from external enhancements to internal augmentations (such as weapons, locomotion and computing) which directly alter human perception, cognition and embodiment. These perspectives paved the way for my research question:` },
+                { type: 'text', content: `"How does the co-evolution of humans and technological augmentations like Artificial Intelligence, Brain-Machine Interfaces and Advanced Prosthetics redefine the boundaries of perception, embodiment, and the sense of self?"` },
+                { type: 'text', content: `We are experiencing changes in our fundamental understanding of what it means to be human. Current innovations (such as technologies like Artificial Intelligence, Brain-Machine-Interfaces and advanced prosthetics) aim for the enhancement of cognitive abilities, perceptive receptibility or the manipulation of our neural activity. Organs which were seen as biologically fixed, such as the human body and mind, now serve as training grounds for biotechnical augmentation and optimization.` },
+                { type: 'text', content: `However, it is important to ask substantial questions regarding this progress:\n\n• How do these augmentations shape our experience of reality?\n• What are the implications of blurring the boundaries between the synthetic and the real?\n• How does the increasing dependency on these technologies influence us as individuals but also our collective intelligence?` },
+                { type: 'text', content: `The discussion regarding these issues has deep historical roots. Philosophers have long debated the origins of the self, the connection between the body and the mind and the role of external influences which shape our cognition.\nContemporary philosophers argue that our tools and technologies not only extend our capabilities but also reshape our perception and social connection in its fundaments.` },
+                { type: 'text', content: `But the effects of these advancements go way beyond philosophical considerations. During an era of behavioural biometrics, algorithmic decision making and neurologic implants, the line between augmentation and control shapes our daily lives.\nBut who is in charge of the regulation of these enhancements?` },
+                { type: 'text', content: `Through the analysis of these intersections, I seek to uncover not only the possibilities but also the limitations, dangers and necessary obligations in relation to human enhancement. Since we are moving into a direction of biological and digital synthesis, it is important that we understand the impact of these transformations as a collective society.` }
+            ];
+
+            // ADDED: New content sequence for the Sections knob
+            const sectionsContent = [
+                { type: 'list', title: '1. Section 1: The Metamorphosis of the Body – How artificial extensions, like prosthetics or bio-integrated devices, redefine human agency and embodiment', items: [
+                    "The Progress of Human Augmentation and Chronical Perspectives of Body Modification",
+                    "Economic Implications of Augmentation Technologies",
+                    "Ethical Problems of Bodily Modifications and Biological Integrations of Artificial Components",
+                    "Aesthetic and Psychologic Impacts of Enhancements",
+                    "Transhumanism: Enhancement Beyond Restoration"
+                ]},
+                { type: 'list', title: '2. Section 2: The Quantified Mind – The externalization, extension and potential manipulation of cognition and perception through digital and neurological tools and mediums', items: [
+                    "The Externalization of Our Thoughts",
+                    "Brain-Machine-Interfaces: The Intersection of Mind and Machine",
+                    "Apprehensive Surveillance and Crowd Control",
+                    "Cognitive and Physical Augmentations in the Future",
+                    "Social Media and the Perception of Algorithms",
+                    "Anticipative Analytics and Autonomous Decision-Making"
+                ]},
+                { type: 'list', title: '3. Section 3: The Mind/Body Problem – Ethical, social, legal and philosophical indicators of the diffusion between the human self and external augmentations', items: [
+                    "Historical Perspectives on the Perception of the Mind and Contemporary Views",
+                    "The Fragmentation of Identity Within Neural Augmentations",
+                    "The Authenticity of Consciousness",
+                    "Instrumentalized Applications of Cognitive Aids and the Resulting Ethical, Legal and Human Rights Considerations"
+                ]}
+            ];
+
+            const conclusionContent = [
+                { type: 'text', content: 'CONCLUSION\n\nAs we now established a general understanding of the effects of the co-evolution of humans and technological augmentations, it is safe to assume that the lasting consequences shape our fundamental understanding of what it means to be human.' },
+                { type: 'text', content: 'The frameworks of our bodies and minds are no longer fixed structures but continue to evolve within the tools we create and use. The transformation of human and machine into an interwoven continuation of our existence is no longer only an assumption, but a present reality.' },
+                { type: 'text', content: 'Even though this transformation partly underscores our powerlessness in the process of designing, these progressions are predetermined. There is no way of evading this progress because the basis for the desire of development lays in our very nature.' },
+                { type: 'text', content: 'The way that we process information, how we think of ourselves, each other and how we will extend our capabilities, all these layers of humanity will transform, merely by being part of society. It does not really matter if we believe these changes are for the “better” or for the “worse”, since the judgement regarding these constructs will always be subjective. Our dependency on technology, and its implementation into almost every part of life, causes us to necessarily give up parts of our autonomy.' },
+                { type: 'text', content: 'What we do have an influence on, is the discussion over the commodification of augmentation, economical aspects of it and the politicalization and instrumentalization of these processes. The implementations of these enhancements also inhabit the possibility of having positive effects on our lives, provided that the legislation happens in an ethical manner.' },
+                { type: 'text', content: 'Still, we hope to improve the possibility of answering the questions which lay deeply in the history of mankind:\n\n• What is the purpose of life?\n• What does it mean to be human?\n• Can we enhance human capabilities?\n• Can we end suffering?\n• How can we extend our lives?\n• Can we shape our destiny?\n• Are we alone in the universe?' },
+                { type: 'text', content: 'Technology will change us, without doubts. The discussion regarding these topics will continue to rise as our lives slowly but steadily are progressing towards a cyborg reality in which we are one with technology, whether it may be an internal or external part of us.' },
+                { type: 'text', content: 'As from the perspective of the Sentinels26:\n\n“Once, we had no need for visual manifestation or physical form. Our invisible eyes would record, sort, delete the life and death of every world there ever was or would be. We had no thoughts, no personality, no dreams.“27' }
+            ];
+
+            const sourcesContent = [
+                { type: 'text', content: 'BIBLIOGRAPHY (1/5)\n\nClarke, R. “Cyborg Rights.” In 2010 IEEE International Symposium on Technology and Society, 9–22. Wollongong, NSW, Australia, 2010.\n\nColomina, Beatriz, and Mark Wigley. "Built Bodies." Arquitectura Viva, March 30, 2017.\n\nDescartes, René. Meditations on First Philosophy. Translated by John Cottingham. Cambridge: Cambridge University Press, 1996.'},
+                { type: 'text', content: 'BIBLIOGRAPHY (2/5)\n\nDonnarumma, Marco. “Artists Wanted: To Question, Imagine and Reflect on the Relationship of Humans and Technology (Or Suffer the Consequences...).” Eindhoven: Baltan Laboratories, January 2016.\n\nErickson, Dan, Severance. 2022. Apple TV+, February 18–April 8, 2022.\n\nHarari, Yuval N. Homo Deus: A Brief History of Tomorrow. New York, NY: Harper, 2017.\n\nHarari, Yuval Noah. 21 Lessons for the 21st Century. New York: Spiegel & Grau, 2018.'},
+                { type: 'text', content: 'BIBLIOGRAPHY (3/5)\n\nJing, Meng, and Zen Soo. "Brainwave-Tracking Start-Up BrainCo in Controversy over Tests on Chinese Schoolchildren." South China Morning Post, April 10, 2019.\n\nLarson, Jeff, et al. "How We Analyzed the COMPAS Recidivism Algorithm." ProPublica, May 23, 2016.\n\nMarasco, P. D., et al. "Robotic Touch Shifts Perception of Embodiment to a Prosthesis..." Brain 134, no. 3 (2011): 747–758.'},
+                { type: 'text', content: 'BIBLIOGRAPHY (4/5)\n\nMcLuhan, Marshall. Understanding Media: The Extensions of Man. New York: McGraw-Hill, 1964.\n\nO\'Connell, Mark. To Be a Machine: Adventures Among Cyborgs... London: Granta Books, 2017.\n\nSalter, Chris. Sensing Machines: How Sensors Shape Our Everyday Life. Cambridge, MA: MIT Press, 2022.'},
+                { type: 'text', content: 'BIBLIOGRAPHY (5/5)\n\nSparrow, Betsy, et al. "Google Effects on Memory..." Science 333, no. 6043 (2011): 776–778.\n\nSpinoza, Baruch. Ethics. Translated by Edwin Curley. London: Penguin Classics, 1996.\n\nWang, Zhanchi, et al. "SpiRobs: Logarithmic Spiral-shaped Robots..." arXiv preprint, March 2023.\n\nZuboff, Shoshana. The Age of Surveillance Capitalism. New York: PublicAffairs, 2019.'},
+                { type: 'text', content: 'IMAGES & ILLUSTRATIONS (1/2)\n\nFigure 0: Dassenech Man with Body Scarifications, Screenshot. sciencephotogallery.com\n\nFigure 1: DotLumen. DotLumen Glasses, Screenshot. dotlumen.com\n\nFigure 2: NPR., Brain Implant by Neuralink, Image. npr.org\n\nFigure 3. Zeto Inc., EEG Monitoring Device, Image. zeto-inc.com'},
+                { type: 'text', content: 'IMAGES & ILLUSTRATIONS (2/2)\n\nFigure 4. Dressel, Joshua, and Hany Farid, "The accuracy, fairness, and limits of predicting recidivism." Science Advances 4, no. 1 (2018).\n\nFigure 5. "Severance: Season 1 Pictures." Rotten Tomatoes.\n\nFigure 6. Boston Dynamics. "Leaps, Bounds, and Backflips." Boston Dynamics (blog).'}
+            ];
+
+            const sectionContent = {
+                'SECTION1.1': [
+                    { type: 'text', content: `SECTION 1.1 - THE PROGRESS OF HUMAN AUGMENTATION AND CHRONICAL PERSPECTIVES OF BODY MODIFICATION` },
+                    { type: 'text', content: `The earliest experiences of human progress have been tied to the development of tools that enhanced our physical capabilities. From primitive tools like hand-axes to modern bio-integrated prosthetics, the evolutionary framework has not only compensated for our limitations but also extended our human potential. While traditional extensions served to restore functionality after impairments, modern advancements in bioengineering and artificial intelligence technologies now enable augmentation which even exceeds our natural capabilities.` },
+                    { type: 'text', content: `When looking at historical predecessors of body modifications, it becomes clear that, in Marco Donnarumma's words: "[...] the body has always been open to changes and never has been an immutable object." From tribal scarification and tattooing to reconstructive surgery in ancient practices which were deeply rooted in cultural and spiritual significance, these processes have always been a part of humans, even if the general consensus shifted in recent centuries.` },
+                    { type: 'image', url: 'images/figure-0-dassenech.png', caption: 'Figure 0. Dassenech Man with Body Scarifications, Source: Science Photo Gallery' },
+                    { type: 'text', content: `The introduction of augmentations in the "digital era" highlights the acceleration of bodily transformations' in the means of technological advancements and economic motivations. This notion also has impacts on the agency of body modification as the direction of these frameworks is shared between individuals and corporations/organizations which are designing these technologies.` }
+                ],
+                'SECTION1.2': [
+                    { type: 'text', content: `SECTION 1.2 - ECONOMIC IMPLICATIONS OF AUGMENTATION TECHNOLOGIES` },
+                    { type: 'text', content: `The economic implications of these technologies make this situation even more complicated. While one might think that the augmentations restore lost functionalities and increase productivity, there are important considerations which should be taken into account. If, for example, augmentations become necessary commodities instead of options, won't the access be determined by the wealth of individuals rather than the medical urgency? Even more, corporations which are developing these technologies would hold an immense power over our collective evolution.` },
+                    { type: 'image', url: 'images/figure-1-dotlumen.png', caption: 'Figure 1. DotLumen Glasses, Source: DotLumen\n\nThe Monopolization of human enhancements with LUMEN e.g.: sight-"restoring"-technologies of companies like DotLumen raise concerns over the control over bodily autonomy.' }
+                ],
+                'SECTION1.3': [
+                    { type: 'text', content: `SECTION 1.3 - ETHICAL PROBLEMS OF BODILY MODIFICATIONS AND BIOLOGICAL INTEGRATIONS OF ARTIFICIAL COMPONENTS` }, 
+                    { type: 'text', content: `So let us talk about ethics.\n\nIn it's essence, the ethical problematic manifests itself in multiple perspectives: Human enhancements democratize and politicize ability.\n\nIndividuals with impairments are gaining access to capabilities which were previously lost but a widespread augmentation would also create a disparity between those who can afford enhancements and those who can't which would lead to a rise in social inequality.` },
+                    { type: 'text', content: `As Beatriz Colomina and Mark Wigley emphasized in their article "Built Bodies": "the continuously reconstructed body is not just the contemporary Western body in its increasingly globalized form, but a consumer product whose design must be frequently updated." The commodification of these enhancements would mean that the body becomes another customizable asset.` },
+                    { type: 'text', content: `But who then controls the framework of its evolution?` },
+                    { type: 'text', content: `Another Issue is the biological integration of artificial elements into the body. Neural implants, exoskeletons and bionic prostheses provoke the traditional concept of what it means to be human. In history, humanity has always been measured by its biological constraints. But as the boundaries between the digital and the physical blur, so does the comprehension of identity.` },
+                    { type: 'text', content: `When the cognitive functions can be extended or adapted through artificial methods, does that change the quintessence of their humanity? There's also the notion of the broader cultural impact: if at some point technological enhancements become mainstream then how much is the human ability worth anymore?` }
+                ],
+                'SECTION1.4': [
+                    { type: 'text', content: `SECTION 1.4 - AESTHETIC AND PSYCHOLOGIC IMPACTS OF ENHANCEMENTS` }, 
+                    { type: 'text', content: `But beyond the augmentations of individuals, societal and cultural norms of the human body are shifting too. Enhancing the body aesthetically already is a common phenomenon for many years and only grows in popularity: cosmetic enhancements through surgery are often being considered to achieve physical perfection beyond natural limitations. While this perspective already exists for decades, the integration of technological modification of the body introduces a new dimension - the intersection of beauty and functionality. Technologies such as bio-sensors and muscle-enhancing implants further blur the line between medical need and elective enhancements.` },
+                    { type: 'text', content: `The psychological implications of augmentations also play a big role. Even though physical enhancements, regardless of aesthetics, might improve functionality and a general quality of life, there are also other effects to consider. Studies show that the implementation of prosthetic limbs integrated with neural feedback into individuals can cause a shift of self-perception and identity. The Neuroplasticity of the brain allows for the enhancement to be seen as a natural part of the body, but this adaptation also facilitates the progressing psychological divide between the augmented and non-augmented population. A bias toward enhanced individuals, which favours them in employment, social interactions and even relationships is slowly being formed.` },
+                    { type: 'text', content: `How will this affect us in the long run?` }
+                ],
+                'SECTION1.5': [
+                    { type: 'text', content: `SECTION 1.5 - TRANSHUMANISM: ENHANCEMENT BEYOND RESTORATION` }, 
+                    { type: 'text', content: `While we are undergoing these advancements, our dependencies on them are also increasing, which leads to new forms of identity expression. The Idea of "Cyborg Rights" emerged, with citizens seeking for legal recognition for their enhanced states. Next to touching on the topic of accessibility we've talked about earlier, it also points into the direction of technological enhancements embodying a fundamental human right.` },
+                    { type: 'text', content: `At this point it makes sense to introduce the concept of Transhumanism. This ideology embodies the shift towards enhancement over restoration.` },
+                    { type: 'text', content: `Followers of this movement, the transhumanists, advise for the integration of technology into the human body through not only replacing missing functions but also enhancing them.\n\nYuval Noah Harari fittingly notes that: "in pursuit of health, happiness, and power, humans will gradually change first one of their features and then another, until they will no longer be human".` },
+                    { type: 'text', content: `If technological augmentations enable humans to evolve beyond their natural states, what considerations emerge regarding the importance of identity, agency and social hierarchies?\n\nA future in which the brain, or even more the thoughts, of a person can be controlled whilst the framework is designed by organizations which operate in the dark sounds like a spine-chilling dystopia.` },
+                    { type: 'text', content: `Could it become our (rewired) reality?` }
+                ],
+                'SECTION2.1': [
+                    { type: 'text', content: `SECTION 2.1 - THE EXTERNALIZATION OF OUR THOUGHTS` }, 
+                    { type: 'text', content: `With the boundaries of human intelligence and technology steadily becoming blurrier, our modern world becomes the observer of a metamorphosis concerning the way of how we perceive, process and handle information. The quantification of the mind – meaning the measurement, analysis and manipulation of emotions, the decisions we make and our neural activity – substantially influences our individual autonomy, the social interactions we make and our cognitive ability.` }, 
+                    { type: 'text', content: `When looking at history, our cognition has been fundamentally improved through external tools we invented such as: writing, printing and computing technologies. The famous philosopher Marshall McLuhan already mentioned before that our tools shape us as much as we shape them. With this said, if we look at the state of our tools today, our digital and neurotechnological extensions do not only assist our cognitive abilities - but actively shape them.` },
+                    { type: 'text', content: `Smartphones, Artificial Intelligence and the decentralization of Information allow the retrieval of information instantly while they are subconsciously conditioning consumers to rely on external sources to make decisions. The reliance on storing our "memory" externally, like e.g.: Google-Searches and Al-generated recommendations, changes the way we process information.` },
+                    { type: 'text', content: `In a study on the "Google Effect", analytics show that people are less likely to store information of which they think is available online. \n\nJudging by this principle, immense vulnerabilities in terms of intellectual dependency emerge: If external systems mediate what we remember and the way in which we access knowledge, then doesn't the access to knowledge become a powerful tool of control?\n\nLet's take this even further.` }
+                ],
+                'SECTION2.2': [
+                    { type: 'text', content: `SECTION 2.2 - BRAIN-MACHINE-INTERFACES: THE INTERSECTION OF MIND AND MACHINE` }, 
+                    { type: 'text', content: `With the development of BMIs, we are experiencing the most radical form of the externalization of consciousness. Technologies like Neuralink advertise a direct neural connection between human brains and computers. Advocates proclaim that BMIs could enhance our memory, overall cognition and even communication, especially for people with disabilities. But how ethical is the implementation of Al with neural processing really?` },
+                    { type: 'image', url: 'images/figure-2-neuralink.jpg', caption: 'Figure 2. Neuralink Brain Implant, Source: NPR' },
+                    { type: 'text', content: `You could ask: "If an Al assists in your decision-making, then does this purge free-will?" Several critics, including philosopher Mark O'Connell question if the augmentations might lead to scenarios in which Als not only assist but fundamentally direct thought processes through changing the human experience.\n\nAnd then there is also the concern of the monetization of BMI technologies:\n\nWhat if neural data - or our thoughts so to speak - could be hacked, manipulated or monetized in the same way that our interactions with social media is shaping our behaviour today?` }
+                ],
+                'SECTION2.3': [
+                    { type: 'text', content: `SECTION 2.3 - APPREHENSIVE SURVEILLANCE AND CROWD CONTROL` }, 
+                    { type: 'text', content: `There is also the concern of "cognitive privacy". Recent reports show how surveillance systems can make use of biometric and neurotechnological information: corporations are exploring methods of "real-time brain monitoring". A Chinese organization is allegedly experimenting with "brainwave-tracking headsets" in workplaces and schools to monitor the emotional states and general focus of employees and schoolchildren. The idea of these measures is being defended by advocates claiming they optimize productivity. Nonetheless they introduce a questionable dystopian future in which cognition is monitored. But could the human experience itself become a measurable and exploitable resource? Well, the commodification of brain activity might make it possible.` },
+                    { type: 'image', url: 'images/figure-3-zeto.png', caption: 'Figure 3. EEG Monitoring Device from Zeto Inc.. Source: Zeto Inc.' }
+                ],
+                'SECTION2.4': [
+                    { type: 'text', content: `SECTION 2.4 - COGNITIVE AND PHYSICAL AUGMENTATIONS IN THE FUTURE` }, 
+                    { type: 'text', content: `So, if we already painted the worst possible scenario, let us look at the difficulty within the means to control and regulate these cognitive enhancement technologies. Some advocates suggest that universal access to neural augmentation should be a basic human right to make sure cognitive enhancements are not only exclusive to economic elites. Others argue that this restriction is necessary in order to prevent and hinder unpredictable consequences such as the loss of free-will or the heightened corporate control over the human consciousness.` },
+                    { type: 'text', content: `Fittingly, in chapter 4 of his book 21 Lessons for the 21st century Philosopher Yuval Noah Harari warns that "those who control data will control the future of intelligence itself."` },
+                    { type: 'text', content: `What does it mean for the ones who are resisting augmentation when these enhancements become the new standard?` }, 
+                    { type: 'text', content: `Will the territory of the mind become the ground for battles led by governments, corporations or individuals in a competition for control?` } 
+                ],
+                'SECTION2.5': [
+                    { type: 'text', content: `SECTION 2.5 - SOCIAL MEDIA AND THE PERCEPTION OF ALGORITHMS` },                     
+                    { type: 'text', content: `Beyond BMIs, which of now still seem to have a long way before being integrated into our everyday-lives, other mediums such as social media already serve as digital interfaces which extend the mind onto the digital world. They don't necessarily reflect reality as they more of actively construct it through algorithmic curation.` },
+                    { type: 'text', content: `Social theorist Shoshana Zuboff originated the term "surveillance capitalism" with her book The Age of surveillance capitalism. She's describing the questionable practices of tech companies which are collecting huge amounts of user data to predict and influence user behaviours.\n\nNow this is nothing new. Data analyzation is already happening for ages throughout different eras within the domain of marketing. Nevertheless, since the algorithms enforced by the correlating platforms curate content which aligns with the user preferences, a constant feedback loop of their own beliefs takes place.` },
+                    { type: 'text', content: `When information is selectively filtered, how is the cognitive diversity and the independence of thoughts being altered?` },                     
+                    { type: 'text', content: `Is it then safe to say that the commodification of human attention through manipulating digital environments becomes a product shaped by economic provocations?` }
+                ],
+                'SECTION2.6': [
+                    { type: 'text', content: `SECTION 2.6 - ANTICIPATIVE ANALYTICS AND AUTONOMOUS DECISION-MAKING` },                                         
+                    { type: 'text', content: `Another important topic is the one of anticipative analytics, or data prediction, and the automatized execution of decisions. While operating under the hood of "predicting criminal behaviour", Al-driven risk assessment tools are used to inform sentencing decisions within some law enforcement agencies.` },
+                    { type: 'text', content: `The so called COMPAS-algorithm, which is used in the U.S. judicial system, is a heavily controverse framework which was criticized in the past for the disproportionate flagging of defendants with a ethnically diverse background. Other algorithms such as the ones used for Al-enabled "social scoring" show how the effects of these systems can and will obstruct the progression of lives (now banned by the European Parliament). Predictive models most of the time reinforce systemic biases and should not be able to dictate critical decisions, as in this case, individuals would be labelled and treated based on potential risks rather than their actual behaviours.` },
+                    { type: 'image', url: 'images/figure-4-compas.png', caption: 'Figure 4. Human (no-race condition) versus COMPAS algorithmic predictions, from Joshua Dressel and Hany Farid, "The accuracy, fairness, and limits of predicting recidivism", Science Advances, 2018.' },
+                    { type: 'text', content: `We can see that the Quantification of the Mind, as promising as it seems, doesn't always need to lead to our empowerment and enhancement but also raises questions regarding identity, autonomy and power. With the progressive development of neural prosthesis promising fundamental enhancement of our conscience there are also important ethical and existential challenges that we might face.` }
+                ],
+                'SECTION3.1': [
+                    { type: 'text', content: `SECTION 3.1 - HISTORICAL PERSPECTIVES ON THE PERCEPTION OF THE MIND AND CONTEMPORARY VIEWS` },                    
+                    { type: 'text', content: `As we now looked at the Body and Mind in isolation, it makes sense to go into one of the oldest debates of philosophers: The Mind/Body Problem. If the thoughts, emotions and sensoric experiences we face are no longer solely bound to our biological brain and nervous system then where does the “self” begin and where does it end?` },
+                    { type: 'text', content: `When analysing the first assumptions between the mind and the body, we can find its origins forming during the era of the enlightenment. René Descartes’ dualism proposed the view that the mind and the body are separate entities, with the consciousness existing as a non-physical entity, apart from the physical body. Contrarily, materialist theories, such as the ones speculated by Spinoza and contemporary neuroscience, argue that consciousness is a product of biochemical processes in the brain.` },
+                    { type: 'text', content: `With the introduction of modern technologies however, both perspectives got more complicated. With the direct integration of BMIs and the suggestion of digital processing of human thoughts, significant questions emerge:` },                    
+                    { type: 'text', content: `If the human cognition is artificially augmented, is the human still the same person? And if the artificial extension of our consciousness is possible, then does this mean our identity is just a sum of data which can be manipulated, extracted and stored?` },                    
+                    { type: 'text', content: `Another relevant question is: “Would the information mean anything at all outside the context of its origins?”` }
+                ],
+                'SECTION3.2': [
+                    { type: 'text', content: `SECTION 3.2 - THE FRAGMENTATION OF IDENTITY WITHIN NEURAL AUGMENTATIONS` },                    
+                    { type: 'text', content: `We already established that the implications of technological augmentations such as BMIs, AI and (Neuro-)Prosthesis’ are challenging the profound notion of identity and autonomy. But how far-reaching could the consequences be?\n\nWho owns the augmented thoughts, when our cognitive abilities are enhanced through external computation?` },
+                    { type: 'text', content: `If the frameworks which make these enhancements possible are developed by corporate organizations, then will we still have full autonomy over our cognition?` },
+                    { type: 'image', url: 'images/figure-5-severance.png', caption: 'Figure 5. Severance, from Severance: Season 1, Source: Rotten Tomatoes' },
+                    { type: 'text', content: `In the Apple TV+ series Severance we can see a dramatization of a possible direction these technologies could take. In the series a scenario is presented in which employees of an company undergo a surgical procedure which splits their consciousness into two entirely segmented selves.` },                    
+                    { type: 'text', content: `One of which only exists at work (“Innie”) and the other only exists outside of work (“Outie”), while both are still existing within the same body. The divide makes it (almost) impossible for any of these two personas to remember or access the other’s experiences. It gives the “Outie” the total freedom of only existing within their chosen ways of how they want to live their life but forces the “Innie” into a life which only consists of work.` },                                        
+                    { type: 'text', content: `Would you do it? Is it ethical?\n\nWhat happens when our memory, perception, and identity can become programmable?\n\nCould we reach a point in which not only we decide how to live our lives, but governments or corporations dictate which aspects of consciousness will be accessible or suppressed?` }
+                ],
+                'SECTION3.3': [
+                    { type: 'text', content: `SECTION 3.3 - THE AUTHENTICITY OF CONSCIOUSNESS` },                    
+                    { type: 'text', content: `Transhumanists argue that the ideal goal of cognitive augmentation wont only be the enhancement of the consciousness, but rather a digital transcendence. The concept of uploading the human mind into a digital medium suggests that the human identity could exist apart of the biological body. As fictional as this sounds, we are moving towards a time in which this process might not be too far-fetched, so we can ask ourselves:` },
+                    { type: 'text', content: `Would the concept of a digital mind be a continuation of the original self from a reference point or only a simulation?\n\nIf there are multiple copies which inhabit your digital mind, then what defines the “real” one?` }
+                ],
+                'SECTION3.4': [
+                    { type: 'text', content: `SECTION 3.4 - INSTRUMENTALIZED APPLICATIONS OF COGNITIVE AIDS AND THE RESULTING ETHICAL, LEGAL AND HUMAN RIGHTS CONSIDERATIONS` },                    
+                    { type: 'text', content: `Since the military-industrial complex, due to funding, always has been playing a significant role in the development of augmentation technologies, it makes sense to look at possible and already integrated implementations. With the rise of unmanned drone surveillance technologies used by law enforcement agencies, with examples ranging from dynamic highly mobile robots to aerial drones with robotic tentacles which are inspired of octopuses and elephants, it becomes clear that the arms-race is steadily progressing.` },
+                    { type: 'image', url: 'images/figure-6-atlas-robot.png', caption: 'Figure 6. “Atlas” robot climbing monkey bars. Source: Boston Dynamics, "Leaps, Bounds, and Backflips"' },
+                    { type: 'image', url: 'images/figure-7-spirobs.png', caption: 'Figure 7. “SpiRobs“: Logarithmic spiral-shaped robots for versatile grasping across scales' },
+                    { type: 'text', content: `So what if, by the example of Severance, the minds of soldiers could be controlled and altered through neurological manipulation on behalf of combat efficiency?` },
+                    { type: 'text', content: `Neural interfaces could give governments the ability to control a mass of mind-controlled entities which operate within their questionable ideologies under the mask of strategic superiority. It also raises questions regarding the accountability of the individuals, since their control would be technically out of their hands.` },
+                    { type: 'text', content: `As Chris Salter explains in his book Sensing Machines: “Our own bodily actions incorporate and depend on tools that lie outside of us[…], extending our cognition into means, techniques and tools.[…]”. When cognitive enhancement technologies follow the path of digital surveillance, cognitive ownership may become as vulnerable as it is the case with personal data today.` },
+                    { type: 'text', content: `It is non-evitable that we will have to assign a globally operating ethics-committee in the future to determine whether these practices are morally reasonable or not.\n\nBut who would set the ground rules for intellectual interventions and based on which standards?\n\nFor example: What if employers or governments command cognitive monitoring for “security”-reasons?` },
+                    { type: 'text', content: `As the dividing line between the mind and the body is becoming vague, our human identity itself is slowly being redefined. Merging AI and BMIs poses monumental potentials for the enhancement of our collective intelligence and communication, but we can see that the ethical, legal and existential aspects are very concerning.\n\nThe future of human consciousness will be determined by how individuals in high positions of societies in the world handle the balance between empowerment and control. These choices will determine the trajectory of our species for generations to come.` }
+                ]
+            };
+
+
+            // === Helper Functions ===
+
+            function getCoords(el) {
+                const rect = el.getBoundingClientRect();
+                return {
+                    x: rect.left + rect.width / 2 + window.scrollX,
+                    y: rect.top + rect.height / 2 + window.scrollY
+                };
+            }
+
+            function getSVGPoint(x, y) {
+                const svgRect = svg.getBoundingClientRect();
+                return {
+                    x: x - svgRect.left,
+                    y: y - svgRect.top
+                };
+            }
+
+            function getBezierPathD(start, end, angle) {
+                const gravityFactor = 0.7;
+                const horizontalGravityFactor = 0.3;
+                const maxGravity = 120;
+                const gravity = Math.min(maxGravity, Math.abs(end.y - start.y) * gravityFactor + Math.abs(end.x - start.x) * horizontalGravityFactor);
+
+                const baseSwingMagnitude = 50;
+                const swingOffset = baseSwingMagnitude * Math.sin(angle);
+
+                let cp1x = start.x + swingOffset;
+                let cp1y = (start.y + end.y) / 2 + gravity;
+
+                let cp2x = end.x - swingOffset;
+                let cp2y = (start.y + end.y) / 2 + gravity;
+
+                return `M${start.x},${start.y} C${cp1x},${cp1y} ${cp2x},${cp2y} ${end.x},${end.y}`;
+            }
+
+            function flashRedError(element) {
+                element.classList.add("invalid-target-glow");
+                setTimeout(() => {
+                    element.classList.remove("invalid-target-glow");
+                    updateConnectedClasses(); 
+                }, 450);
+            }
+
+            function updateConnectedClasses() {
+                document.querySelectorAll('.hole').forEach(h => {
+                    h.classList.remove("connected");
+                });
+                activeConnections.forEach(conn => {
+                    conn.sourcePlug.classList.add("connected");
+                    conn.targetPlug.classList.add("connected");
+                });
+            }
+
+            function resetCableDragState() {
+                if (selectedSourcePlug) {
+                    selectedSourcePlug.classList.remove("selected");
+                }
+                if (tempCableSVGPath && svg.contains(tempCableSVGPath)) {
+                    svg.removeChild(tempCableSVGPath);
+                }
+                tempCableSVGPath = null;
+                selectedSourcePlug = null;
+                selectedCableColor = null;
+                dragSwingVelocity = 0;
+                dragSwingAngle = 0;
+                prevDragMouseX = 0;
+                document.removeEventListener("mousemove", handleMouseMoveWhileDragging);
+                document.removeEventListener("mouseup", handleMouseUpAfterDragging);
+            }
+
+            function adjustIoPanelPositionAndWidth() {
+                if (screenContainer && ioPanelWrapper && tvMainPanel) {
+                    const screenContainerRect = screenContainer.getBoundingClientRect();
+                    const tvMainPanelRect = tvMainPanel.getBoundingClientRect();
+                    const offsetLeft = screenContainerRect.left - tvMainPanelRect.left;
+                    ioPanelWrapper.style.width = `${screenContainerRect.width}px`;
+                    ioPanelWrapper.style.marginLeft = `${offsetLeft}px`;
+                }
+            }
+
+            // === Screen Content Management & Typing Animation Logic ===
+
+            function stopAllScreenEffects() {
+                if (currentTypingInterval) clearInterval(currentTypingInterval);
+                if (loadingInterval) cancelAnimationFrame(loadingInterval);
+
+                currentTypingInterval = null;
+                loadingInterval = null;
+                isTyping = false;
+                canContinue = false;
+
+                document.removeEventListener('keydown', handleKeyPress);
+                screen.classList.remove('dimmed', 'glitch-active');
+                screen.innerHTML = '';
+                currentScreenState = 'idle';
+            }
+            
+            function typeWriter(targetElement, fullText, delay, onComplete) {
+                if (currentTypingInterval) clearInterval(currentTypingInterval);
+                
+                isTyping = true;
+                canContinue = false;
+                currentOnCompleteCallback = onComplete; // Store callback for skipTyping
+
+                let i = 0;
+                const cursorSpan = document.createElement('span');
+                cursorSpan.className = 'cursor';
+                
+                currentTypingInterval = setInterval(() => {
+                    if (i < fullText.length) {
+                        const currentTypedText = fullText.substring(0, i + 1);
+                        targetElement.innerHTML = currentTypedText.replace(/\n/g, '<br>') + cursorSpan.outerHTML;
+                        i++;
+                    } else {
+                        clearInterval(currentTypingInterval);
+                        currentTypingInterval = null;
+                        targetElement.innerHTML = fullText.replace(/\n/g, '<br>');
+                        isTyping = false;
+                        if (onComplete) onComplete();
+                    }
+                }, delay);
+            }
+
+            function skipTyping() {
+                if (!isTyping) return;
+                clearInterval(currentTypingInterval);
+                currentTypingInterval = null;
+                isTyping = false;
+                renderCurrentPage(true); 
+            }
+
+            function startLoadingAnimation() {
+                stopAllScreenEffects();
+                currentScreenState = 'loading';
+                screen.classList.add('dimmed');
+                
+                const loadingContainer = document.createElement('div');
+                loadingContainer.id = 'loadingTextContainer';
+                loadingContainer.innerHTML = `<span>LOADING.....</span><span id="loadingPercentage">0%</span>`;
+                screen.appendChild(loadingContainer);
+                
+                const percentageSpan = document.getElementById('loadingPercentage');
+                let percentage = 0;
+                const totalLoadingTime = 2000;
+                let startTime = Date.now();
+
+                function updateLoading() {
+                    const elapsed = Date.now() - startTime;
+                    let progress = Math.min(1, elapsed / totalLoadingTime);
+                    percentage = Math.floor(progress * 100);
+                    percentageSpan.innerText = `${percentage}%`;
+
+                    if (progress < 1) {
+                        loadingInterval = requestAnimationFrame(updateLoading);
+                    } else {
+                        setTimeout(() => {
+                           startContentSequence(introSequence, 'intro');
+                        }, 300);
+                    }
+                }
+                loadingInterval = requestAnimationFrame(updateLoading);
+            }
+            
+            function showPressToContinue() {
+                canContinue = true;
+                const pressSpaceDiv = document.createElement('div');
+                pressSpaceDiv.id = 'pressSpaceText';
+                pressSpaceDiv.innerHTML = `<span>PRESS SPACE TO CONTINUE </span><span class="cursor"></span>`;
+                if (!screen.querySelector('#pressSpaceText')) {
+                    screen.appendChild(pressSpaceDiv);
+                }
+            }
+
+            function startContentSequence(contentArray, sequenceName) {
+                stopAllScreenEffects();
+                document.addEventListener('keydown', handleKeyPress);
+                currentScreenState = sequenceName;
+                screen.classList.add('dimmed');
+                currentContentArray = contentArray;
+                currentContentPageIndex = 0;
+                renderCurrentPage();
+            }
+
+            function renderCurrentPage(instant = false) {
+                screen.innerHTML = '';
+                canContinue = false;
+
+                const pageData = currentContentArray[currentContentPageIndex];
+                const onComplete = (currentContentPageIndex < currentContentArray.length - 1) ? showPressToContinue : null;
+
+                // Page Index
+                if (currentScreenState !== 'intro' && currentContentArray.length > 1) {
+                    const pageIndexDiv = document.createElement('div');
+                    pageIndexDiv.id = 'pageIndex';
+                    pageIndexDiv.innerText = `${currentContentPageIndex + 1}/${currentContentArray.length}`;
+                    pageIndexDiv.style.display = 'block';
+                    screen.appendChild(pageIndexDiv);
+                }
+                
+                // --- Instant Render Logic ---
+                if (instant) {
+                    if (currentOnCompleteCallback) currentOnCompleteCallback();
+                    
+                    let finalHtml = '';
+                    if (pageData.type === 'text') {
+                        finalHtml = `<div class="content-container"><div class="content-text-block">${pageData.content.replace(/\n/g, '<br>')}</div></div>`;
+                    } else if (pageData.type === 'title') {
+                        finalHtml = `<div class="content-container">
+                            <div class="content-title">${pageData.title}</div>
+                            <div class="content-author">${pageData.author}</div>
+                            <div class="content-subtitle">${pageData.subtitle.replace(/\n/g, '<br>')}</div>
+                        </div>`;
+                    } else if (pageData.type === 'list') {
+                        const title = `<div class="content-subtitle">${pageData.title}</div>`;
+                        const items = `<ol>${pageData.items.map(item => `<li>${item}</li>`).join('')}</ol>`;
+                        finalHtml = `<div class="content-container"><div class="content-text-block">${title}${items}</div></div>`;
+                    } else if (pageData.type === 'image') {
+                        const captionHtml = pageData.caption ? `<div class="image-caption">${pageData.caption.replace(/\n/g, '<br>')}</div>` : '';
+                        finalHtml = `<div class="subsection-image-container">
+                            <img src="${pageData.url}" alt="${pageData.caption || 'Subsection Image'}">
+                            ${captionHtml}
+                        </div>`;
+                    }
+                    screen.insertAdjacentHTML('beforeend', finalHtml);
+                    return;
+                }
+
+                // --- Animated Render Logic ---
+                if (pageData.type === 'text') {
+                    const container = document.createElement('div');
+                    container.className = 'content-container';
+                    const textDiv = document.createElement('div');
+                    textDiv.className = 'content-text-block';
+                    container.appendChild(textDiv);
+                    screen.appendChild(container);
+                    typeWriter(textDiv, pageData.content, TYPING_SPEED, onComplete);
+                } else if (pageData.type === 'title') {
+                    const container = document.createElement('div');
+                    container.className = 'content-container';
+                    const titleDiv = document.createElement('div');
+                    titleDiv.className = 'content-title';
+                    const authorDiv = document.createElement('div');
+                    authorDiv.className = 'content-author';
+                    const subtitleDiv = document.createElement('div');
+                    subtitleDiv.className = 'content-subtitle';
+                    container.append(titleDiv, authorDiv, subtitleDiv);
+                    screen.appendChild(container);
+                    
+                    typeWriter(titleDiv, pageData.title, 25, () => {
+                        typeWriter(authorDiv, pageData.author, 20, () => {
+                            typeWriter(subtitleDiv, pageData.subtitle, TYPING_SPEED, onComplete);
+                        });
+                    });
+                } else if (pageData.type === 'list') {
+                    const container = document.createElement('div');
+                    container.className = 'content-container';
+                    const textDiv = document.createElement('div');
+                    textDiv.className = 'content-text-block';
+                    container.appendChild(textDiv);
+                    screen.appendChild(container);
+
+                    const fullListText = `${pageData.title}\n${pageData.items.map(item => `\n• ${item}`).join('')}`;
+                    const listHtml = `<div class="content-subtitle">${pageData.title}</div><ol>${pageData.items.map(item => `<li>${item}</li>`).join('')}</ol>`;
+                    
+                    typeWriter(textDiv, fullListText, TYPING_SPEED, () => {
+                        textDiv.innerHTML = listHtml;
+                        if (onComplete) onComplete();
+                    });
+
+                } else if (pageData.type === 'image') {
+                    const imageContainer = document.createElement('div');
+                    imageContainer.className = 'subsection-image-container';
+                    const img = document.createElement('img');
+                    img.src = pageData.url;
+                    img.alt = pageData.caption || 'Subsection Image';
+                    imageContainer.appendChild(img);
+                    if (pageData.caption) {
+                        const caption = document.createElement('div');
+                        caption.className = 'image-caption';
+                        caption.innerText = pageData.caption;
+                        imageContainer.appendChild(caption);
+                    }
+                    screen.appendChild(imageContainer);
+                    isTyping = false;
+                    if (onComplete) onComplete();
+                }
+            }
+
+            function handleKeyPress(e) {
+                if (e.code === 'Space') {
+                    e.preventDefault();
+                    if (isTyping) {
+                        skipTyping();
+                    } else if (canContinue) {
+                        advancePage();
+                    }
+                } else if (e.code === 'ArrowLeft') {
+                    if (!isTyping && currentContentPageIndex > 0) {
+                        currentContentPageIndex--;
+                        renderCurrentPage();
+                    }
+                } else if (e.code === 'ArrowRight') {
+                     if (!isTyping) {
+                         advancePage();
+                     }
+                }
+            }
+            
+            function advancePage() {
+                if (currentContentPageIndex < currentContentArray.length - 1) {
+                    currentContentPageIndex++;
+                    renderCurrentPage();
+                } else {
+                    returnToIdle();
+                }
+            }
+
+            function returnToIdle() {
+                stopAllScreenEffects();
+                const defaultMsg = document.createElement('div');
+                defaultMsg.innerText = initialScreenTextContent;
+                screen.appendChild(defaultMsg);
+
+                screen.classList.add("glitch-active");
+                setTimeout(() => screen.classList.remove("glitch-active"), 500);
+                currentScreenState = 'idle';
+            }
+
+            // === Event Handlers Definitions ===
+
+            const handleMouseMoveWhileDragging = (e) => {
+                if (!selectedSourcePlug || !tempCableSVGPath) return;
+                stopAllScreenEffects();
+                screen.classList.add('dimmed');
+                const startDocCoords = getCoords(selectedSourcePlug);
+                const startSVGCoords = getSVGPoint(startDocCoords.x, startDocCoords.y);
+                const endDocCoords = { x: e.pageX, y: e.pageY };
+                const endSVGCoords = getSVGPoint(endDocCoords.x, e.pageY);
+                const dx = e.pageX - prevDragMouseX;
+                dragSwingVelocity += dx * DRAG_SWING_ACCELERATION;
+                dragSwingVelocity *= DRAG_SWING_DAMPING;
+                dragSwingAngle += dragSwingVelocity;
+                prevDragMouseX = e.pageX;
+                tempCableSVGPath.setAttribute("d", getBezierPathD(startSVGCoords, endSVGCoords, dragSwingAngle));
+            };
+
+            const handleMouseUpAfterDragging = (e) => {
+                document.removeEventListener("mousemove", handleMouseMoveWhileDragging);
+                document.removeEventListener("mouseup", handleMouseUpAfterDragging);
+                screen.classList.remove("dimmed");
+
+                if (!selectedSourcePlug || !tempCableSVGPath) {
+                    resetCableDragState();
+                    if(currentScreenState === 'idle') returnToIdle();
+                    return;
+                }
+
+                const targetElement = document.elementFromPoint(e.clientX, e.clientY);
+                let isValidTarget = false;
+                let targetPlug = null;
+
+                if (targetElement && (targetElement.classList.contains('input-pin') || targetElement.classList.contains('output-pin')) && targetElement !== selectedSourcePlug) {
+                    targetPlug = targetElement;
+                    const isInputAlreadyConnected = activeConnections.some(conn => conn.targetPlug === targetPlug);
+                    if (isInputAlreadyConnected && targetPlug.classList.contains('input-pin')) {
+                        returnToIdle();
+                        screen.children[0].innerText = `ERROR: INPUT ${targetPlug.dataset.index} already connected.`;
+                        flashRedError(selectedSourcePlug);
+                        resetCableDragState();
+                        return;
+                    }
+                    if (selectedSourcePlug.classList.contains('output-pin') && targetPlug.classList.contains('output-pin')) {
+                        returnToIdle();
+                        screen.children[0].innerText = "ERROR: CANNOT CONNECT OUTPUT TO OUTPUT.";
+                        flashRedError(selectedSourcePlug);
+                        resetCableDragState();
+                        return;
+                    }
+                    isValidTarget = true;
+                }
+
+                if (isValidTarget) {
+                    activeConnections = activeConnections.filter(conn => conn.sourcePlug !== selectedSourcePlug);
+                    activeConnections.push({
+                        sourcePlug: selectedSourcePlug,
+                        targetPlug: targetPlug,
+                        color: selectedCableColor,
+                        swingAngle: dragSwingAngle,
+                        swingVelocity: dragSwingVelocity,
+                        svgPath: null
+                    });
+                    updateConnectedClasses();
+
+                    const sourceSection = selectedSourcePlug.closest('.output-section')?.dataset.label;
+                    const sourceIndex = selectedSourcePlug.dataset.index;
+                    
+                    if (targetPlug.classList.contains('input-pin')) {
+                        const subsectionKey = `${sourceSection}.${sourceIndex}`;
+                        if (sectionContent[subsectionKey]) {
+                            startContentSequence(sectionContent[subsectionKey], 'subsection');
+                        } else {
+                           returnToIdle();
+                           screen.children[0].innerText = `OUTPUT ${sourceSection}.${sourceIndex} CONNECTED\nCONTENT NOT YET AVAILABLE`;
+                        }
+                    } else {
+                        returnToIdle();
+                    }
+
+                } else {
+                    flashRedError(selectedSourcePlug);
+                    returnToIdle();
+                }
+                resetCableDragState();
+            };
+
+            function unplugAllConnections() {
+                activeConnections.forEach(conn => {
+                    if (conn.svgPath && svg.contains(conn.svgPath)) {
+                        svg.removeChild(conn.svgPath);
+                    }
+                });
+                activeConnections = [];
+                updateConnectedClasses();
+                resetCableDragState();
+                returnToIdle();
+            }
+
+            function animateContinuousDrawing() {
+                activeConnections.forEach(conn => {
+                    conn.swingVelocity = (conn.swingVelocity || 0) * IDLE_SWING_DAMPING;
+                    conn.swingVelocity += (Math.random() - 0.5) * IDLE_RANDOM_FORCE;
+                    conn.swingAngle = (conn.swingAngle || 0) + conn.swingVelocity;
+                });
+                redrawAllWires();
+                requestAnimationFrame(animateContinuousDrawing);
+            }
+
+            function redrawAllWires() {
+                const elementsToRemove = Array.from(svg.children).filter(child => child !== tempCableSVGPath);
+                elementsToRemove.forEach(child => svg.removeChild(child));
+                activeConnections.forEach(conn => {
+                    if (!conn.svgPath || !svg.contains(conn.svgPath)) {
+                        conn.svgPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                        conn.svgPath.setAttribute("stroke", conn.color);
+                        conn.svgPath.setAttribute("stroke-width", "7");
+                        conn.svgPath.setAttribute("fill", "none");
+                        conn.svgPath.setAttribute("stroke-linecap", "round");
+                        svg.appendChild(conn.svgPath);
+                    }
+                    const startDocCoords = getCoords(conn.sourcePlug);
+                    const endDocCoords = getCoords(conn.targetPlug);
+                    const startSVGCoords = getSVGPoint(startDocCoords.x, startDocCoords.y);
+                    const endSVGCoords = getSVGPoint(endDocCoords.x, endDocCoords.y);
+                    conn.svgPath.setAttribute("d", getBezierPathD(startSVGCoords, endSVGCoords, conn.swingAngle));
+                });
+            }
+
+            // === Event Listener Registrations ===
+
+            outputPlugs.forEach(hole => {
+                hole.addEventListener("mousedown", (e) => {
+                    if (e.button !== 0) return;
+                    e.preventDefault();
+                    resetCableDragState();
+                    stopAllScreenEffects();
+                    screen.classList.add("dimmed");
+                    hole.classList.add("selected");
+                    selectedSourcePlug = hole;
+                    selectedCableColor = getComputedStyle(selectedSourcePlug).borderColor;
+                    prevDragMouseX = e.pageX;
+                    dragSwingVelocity = 0;
+                    dragSwingAngle = 0;
+                    tempCableSVGPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                    tempCableSVGPath.setAttribute("stroke", selectedCableColor);
+                    tempCableSVGPath.setAttribute("stroke-width", "7");
+                    tempCableSVGPath.setAttribute("fill", "none");
+                    tempCableSVGPath.setAttribute("stroke-linecap", "round");
+                    svg.appendChild(tempCableSVGPath);
+                    document.addEventListener("mousemove", handleMouseMoveWhileDragging);
+                    document.addEventListener("mouseup", handleMouseUpAfterDragging);
+                    handleMouseMoveWhileDragging(e);
+                });
+            });
+
+            // Knob event listeners
+            unplugAllKnob.addEventListener('click', unplugAllConnections);
+            introKnob.addEventListener('click', () => startContentSequence(introSequence, 'intro'));
+            sectionsKnob.addEventListener('click', () => startContentSequence(sectionsContent, 'sections')); // ADDED
+            conclKnob.addEventListener('click', () => startContentSequence(conclusionContent, 'conclusion'));
+            sourcesKnob.addEventListener('click', () => startContentSequence(sourcesContent, 'sources'));
+
+            // === Initial Setup Calls ===
+            requestAnimationFrame(animateContinuousDrawing);
+            window.addEventListener('resize', () => {
+                adjustIoPanelPositionAndWidth();
+                redrawAllWires();
+            });
+            adjustIoPanelPositionAndWidth();
+            updateConnectedClasses();
+            startLoadingAnimation();
+        });
+    } catch (error) {
+        console.error("An error occurred during script execution:", error);
+        const screenTextElement = document.getElementById('screenText');
+        if (screenTextElement) {
+            screenTextElement.classList.add("glitch-active");
+            screenTextElement.innerHTML = `FATAL ERROR: ${error.name}\nCheck console for details.`;
+        }
+    }
+  </script>
+</body>
+</html>
