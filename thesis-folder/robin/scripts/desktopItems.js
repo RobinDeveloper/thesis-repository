@@ -43,7 +43,9 @@ const desktopItems = [
 
 	    <p class="section-title">References</p>
             1. Nick Montfort, et al. 10 PRINT CHR$(205.5+RND(1)); GOTO 10. MIT Press, 2012.
+	    <br>
 	    2. Predefined values built into the computer, common in computer science literature.
+	    <br>
 	    3. The first found use of this function, or almost the FISR function was in the comments of a fdlib library file where 2 computer scientists mention an unpublished paper with this algorithm as main topic.
         `)
     },
@@ -61,6 +63,8 @@ const desktopItems = [
 
 	    <p class="section-title">References</p>
             1. Nick Montfort "Platform Studies." In 10 PRINT CHR$(205.5+RND(1)); : GOTO 10, Nick Montfort, Patsy Baudoin, John Bell, Ian Bogost, Jeremy Douglass, Mark C. Marino, Michael Mateas, Casey Reas, Mark Sample, and Noah Vawter, pp.6–7, Cambridge, MA: MIT Press, 2013
+	    <br>
+
 	    2.Wendy Hui Kyong Chun, Programmed Visions: Software and Memory (Cambridge, MA: MIT Press, 2011), pp. 9–10.
         `)
     },
@@ -79,7 +83,9 @@ const desktopItems = [
     
             <p class="section-title">References</p>
             1. Winnie Soon, Executing Liveness: An Examination of the Live Dimension of Code Inter-actions in Software (Art) Practice (PhD diss., Aarhus University, 2016), Chapter 1.3, pp. 26–43.
+	    <br>
 	    2.  Audience in the sense ranging from live performance audience to a more individual observer.
+	    <br>
 	    3.  Daniel Holden, Chris Kerr, CodePoetry, April 5, 2025, https://code-poetry.com/home
 	`)
     },
@@ -110,7 +116,9 @@ const desktopItems = [
 
 	<p class="section-title">References</p>
         1. Mark C. Marino, Critical Code Studies,(MIT. Press), Critical Code Studies, a Manifesto, pp.37-54
+	<br>
 	2. Soon, Executing Liveness, pp.268
+	<br>
 	3. Albert Camus, Create Dangerously,translator Justin O’Brien (Pinguin Modern classics), pp.1-39
     `)
     },
